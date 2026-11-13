@@ -1,0 +1,888 @@
+{
+  "entities": {
+    "UserPublicProfile": {
+      "title": "UserPublicProfile",
+      "description": "Publicly visible profile for a Layali voice chat user (strictly non-PII).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique user ID matching Firebase Auth UID."
+        },
+        "username": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "Display nickname shown in rooms."
+        },
+        "avatar": {
+          "type": "string",
+          "maxLength": 200000,
+          "description": "User avatar URL or compressed image data URL."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["owner", "vip", "admin", "super_admin", "member", "guest"],
+          "description": "Default global role badge."
+        },
+        "countryCode": {
+          "type": "string",
+          "maxLength": 10,
+          "description": "ISO or country tab code."
+        },
+        "flag": {
+          "type": "string",
+          "maxLength": 16,
+          "description": "Emoji country flag."
+        },
+        "level": {
+          "type": "number",
+          "description": "User experience level."
+        },
+        "coins": {
+          "type": "number",
+          "description": "Virtual coins balance for gifts."
+        },
+        "giftsReceivedCount": {
+          "type": "number",
+          "description": "Total gifts received."
+        },
+        "textColor": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Preferred chat text hex color."
+        },
+        "mood": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Short bio or status message."
+        },
+        "birthDate": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Birth date string (YYYY-MM-DD)."
+        },
+        "isPrivateChatLocked": {
+          "type": "boolean",
+          "description": "Whether incoming private messages are blocked."
+        },
+        "isSoundEffectsMuted": {
+          "type": "boolean",
+          "description": "Whether room UI sound effects (alerts, messages, gifts) are muted while mic audio stays audible."
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Public visibility flag for directory queries."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last update timestamp."
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "avatar",
+        "role",
+        "countryCode",
+        "flag",
+        "level",
+        "coins",
+        "giftsReceivedCount",
+        "textColor",
+        "mood",
+        "isPrivateChatLocked",
+        "isPublic",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserPrivateData": {
+      "title": "UserPrivateData",
+      "description": "Isolated PII and security settings for a user, readable only by the owner or admin.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Matches Firebase Auth UID."
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Verified account email address."
+        },
+        "profilePin": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "User's profile lock PIN code."
+        },
+        "deviceId": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Generated device identifier."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": ["id", "email", "profilePin", "deviceId", "createdAt", "updatedAt"]
+    },
+    "Room": {
+      "title": "Room",
+      "description": "A live voice and text chat room with mic stage, master configuration, and quotas.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Room document ID."
+        },
+        "code": {
+          "type": "string",
+          "maxLength": 16,
+          "description": "Numeric room display code."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Display title of the room."
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 32,
+          "description": "Country or entertainment category."
+        },
+        "countryName": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Arabic country label."
+        },
+        "countryKeywords": {
+          "type": "array",
+          "description": "Searchable Arabic/English keywords (max 20)."
+        },
+        "flag": {
+          "type": "string",
+          "maxLength": 16,
+          "description": "Room flag emoji."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Room bio/description."
+        },
+        "ownerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50,
+          "description": "Room Master display name."
+        },
+        "ownerAvatar": {
+          "type": "string",
+          "maxLength": 200000,
+          "description": "Room Master avatar URL."
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Display ID of the assigned room master."
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the creator/owner."
+        },
+        "masterPinCode": {
+          "type": "string",
+          "maxLength": 16,
+          "description": "4-digit PIN for Master entrance."
+        },
+        "occupantsCount": {
+          "type": "number",
+          "description": "Live count of occupants inside the room."
+        },
+        "maxCapacity": {
+          "type": "number",
+          "description": "Maximum allowed concurrent occupants."
+        },
+        "isLocked": {
+          "type": "boolean",
+          "description": "Whether room requires password for guests."
+        },
+        "password": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Optional room lock password."
+        },
+        "welcomeMessage": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Room marquee welcome banner."
+        },
+        "activeSpeakerId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "UID of current speaker on mic or empty string when free."
+        },
+        "speakerStartedAtMs": {
+          "type": "number",
+          "description": "Epoch milliseconds when current speaker took the mic."
+        },
+        "isMicTimerPaused": {
+          "type": "boolean",
+          "description": "When true, the current speaker mic countdown is paused/pinned."
+        },
+        "micPausedRemainingSec": {
+          "type": "number",
+          "description": "Remaining mic seconds saved when countdown is paused."
+        },
+        "micQueue": {
+          "type": "array",
+          "description": "Ordered list of user IDs waiting for mic (max 50)."
+        },
+        "isGoldName": {
+          "type": "boolean",
+          "description": "Gold room title highlight."
+        },
+        "validityDays": {
+          "type": "number",
+          "description": "Room validity duration in days."
+        },
+        "expiresAt": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "ISO 8601 expiration date string."
+        },
+        "expiresAtMs": {
+          "type": "number",
+          "description": "Exact expiration timestamp in epoch milliseconds."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Active activation status; automatically becomes false upon expiration."
+        },
+        "roleQuotas": {
+          "type": "object",
+          "description": "Maximum allowed ranked credentials per role."
+        },
+        "micDurations": {
+          "type": "object",
+          "description": "Configured mic speaking duration in seconds per user role."
+        },
+        "mutedUserIds": {
+          "type": "array",
+          "description": "List of muted user UIDs (max 200)."
+        },
+        "isMicLocked": {
+          "type": "boolean",
+          "description": "When true, mic is restricted to staff."
+        },
+        "activeVideoStream": {
+          "type": "object",
+          "description": "Active live stream state object or null."
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Visibility flag for lobby queries."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last update timestamp."
+        }
+      },
+      "required": [
+        "id",
+        "code",
+        "name",
+        "category",
+        "countryName",
+        "flag",
+        "description",
+        "ownerName",
+        "ownerAvatar",
+        "ownerId",
+        "ownerUid",
+        "occupantsCount",
+        "maxCapacity",
+        "isLocked",
+        "welcomeMessage",
+        "micQueue",
+        "isMicLocked",
+        "isPublic",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "RoomParticipant": {
+      "title": "RoomParticipant",
+      "description": "Real-time presence record for an authenticated user currently inside a room.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Participant Firebase Auth UID."
+        },
+        "roomId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Parent room ID."
+        },
+        "username": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "Active nickname in the room."
+        },
+        "avatar": {
+          "type": "string",
+          "maxLength": 200000,
+          "description": "Avatar image URL or compressed data URL."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["owner", "vip", "admin", "super_admin", "member", "guest"],
+          "description": "Verified role inside this room."
+        },
+        "countryCode": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "flag": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "level": {
+          "type": "number"
+        },
+        "coins": {
+          "type": "number"
+        },
+        "giftsReceivedCount": {
+          "type": "number"
+        },
+        "textColor": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "mood": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "isMuted": {
+          "type": "boolean"
+        },
+        "isBound": {
+          "type": "boolean"
+        },
+        "isPrivateChatLocked": {
+          "type": "boolean"
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastSeenAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "roomId",
+        "username",
+        "avatar",
+        "role",
+        "countryCode",
+        "flag",
+        "level",
+        "coins",
+        "giftsReceivedCount",
+        "textColor",
+        "mood",
+        "isMuted",
+        "isBound",
+        "isPrivateChatLocked",
+        "joinedAt",
+        "lastSeenAt"
+      ]
+    },
+    "RoomCredential": {
+      "title": "RoomCredential",
+      "description": "Rank PIN credential assigned by a room Master.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "roomId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "username": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "pinCode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20
+        },
+        "role": {
+          "type": "string",
+          "enum": ["owner", "vip", "admin", "super_admin", "member", "guest"]
+        },
+        "deviceId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "assignedAt": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "assignedByUid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "roomId",
+        "username",
+        "pinCode",
+        "role",
+        "assignedByUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "RoomBan": {
+      "title": "RoomBan",
+      "description": "Banned user entry in a room.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "roomId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ip": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "deviceId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "username": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "targetUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "bannedAt": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "bannedBy": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "bannedByUid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "roomId",
+        "ip",
+        "username",
+        "bannedAt",
+        "bannedBy",
+        "bannedByUid",
+        "createdAt"
+      ]
+    },
+    "RoomMessage": {
+      "title": "RoomMessage",
+      "description": "Real-time message, image, voice note, gift, or system notice inside a room.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "roomId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "senderUid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "senderId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "senderName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "senderRole": {
+          "type": "string",
+          "enum": ["owner", "vip", "admin", "super_admin", "member", "guest"]
+        },
+        "senderAvatar": {
+          "type": "string",
+          "maxLength": 200000
+        },
+        "senderFlag": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "content": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "timestamp": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "color": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "isBold": {
+          "type": "boolean"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["text", "gift", "system", "mic_event", "voice_clip", "image"]
+        },
+        "imageUrl": {
+          "type": "string",
+          "maxLength": 500000
+        },
+        "voiceClipUrl": {
+          "type": "string",
+          "maxLength": 500000
+        },
+        "voiceDuration": {
+          "type": "number"
+        },
+        "giftData": {
+          "type": "object"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "roomId",
+        "senderUid",
+        "senderId",
+        "senderName",
+        "senderRole",
+        "senderAvatar",
+        "senderFlag",
+        "content",
+        "timestamp",
+        "type",
+        "createdAt"
+      ]
+    },
+    "PrivateConversation": {
+      "title": "PrivateConversation",
+      "description": "Metadata for a 1-to-1 private chat conversation.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "participantIds": {
+          "type": "array",
+          "description": "Exactly 2 participant UIDs."
+        },
+        "lastMessage": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "lastTimestamp": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "participantIds", "createdAt", "updatedAt"]
+    },
+    "PrivateMessage": {
+      "title": "PrivateMessage",
+      "description": "A direct message inside a 1-to-1 private conversation.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "conversationId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "senderId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "recipientId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "participantIds": {
+          "type": "array",
+          "description": "Exactly 2 participant UIDs matching parent conversation."
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "timestamp": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "conversationId",
+        "senderId",
+        "recipientId",
+        "participantIds",
+        "content",
+        "timestamp",
+        "createdAt"
+      ]
+    },
+    "UserInboxChat": {
+      "title": "UserInboxChat",
+      "description": "Per-user private chat index entry linking an owner UID to a 1-to-1 conversation.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "partnerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "lastMessage": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "lastTimestamp": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "ownerId", "partnerId", "createdAt", "updatedAt"]
+    },
+    "RoomReport": {
+      "title": "RoomReport",
+      "description": "User-submitted abuse or policy violation report inside a room.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "roomId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "reporterId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "reporterName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "targetUserId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "targetUsername": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "details": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "roomId",
+        "reporterId",
+        "reporterName",
+        "targetUserId",
+        "targetUsername",
+        "reason",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users_public/{userId}": {
+      "schema": { "$ref": "#/entities/UserPublicProfile" },
+      "description": "Public user profiles (non-PII) keyed by client UID."
+    },
+    "/users_public/{userId}/inbox/{chatId}": {
+      "schema": { "$ref": "#/entities/UserInboxChat" },
+      "description": "Per-user index of active 1-to-1 private chat conversations."
+    },
+    "/users_private/{userId}": {
+      "schema": { "$ref": "#/entities/UserPrivateData" },
+      "description": "Private PII and security PINs keyed by Firebase Auth UID."
+    },
+    "/rooms/{roomId}": {
+      "schema": { "$ref": "#/entities/Room" },
+      "description": "Voice chat rooms directory and live stage state."
+    },
+    "/rooms/{roomId}/participants/{participantId}": {
+      "schema": { "$ref": "#/entities/RoomParticipant" },
+      "description": "Real-time online users currently inside the room."
+    },
+    "/rooms/{roomId}/credentials/{credId}": {
+      "schema": { "$ref": "#/entities/RoomCredential" },
+      "description": "Assigned rank PINs for the room."
+    },
+    "/rooms/{roomId}/bans/{banId}": {
+      "schema": { "$ref": "#/entities/RoomBan" },
+      "description": "Banned users in the room."
+    },
+    "/rooms/{roomId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/RoomMessage" },
+      "description": "Real-time room chat stream."
+    },
+    "/rooms/{roomId}/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/RoomReport" },
+      "description": "User-submitted abuse reports for moderation compliance."
+    },
+    "/private_chats/{chatId}": {
+      "schema": { "$ref": "#/entities/PrivateConversation" },
+      "description": "1-to-1 private chat conversation metadata."
+    },
+    "/private_chats/{chatId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/PrivateMessage" },
+      "description": "Messages inside a 1-to-1 private conversation."
+    }
+  }
+}

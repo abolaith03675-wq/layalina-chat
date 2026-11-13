@@ -1,0 +1,654 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================
+    // Global Hardened Helpers
+    // =========================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        (request.auth.token.email == 'abolaith03675@gmail.com') ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidRole(role) {
+      return role in ['owner', 'vip', 'admin', 'super_admin', 'member', 'guest'];
+    }
+
+    // Room-level helpers (used only in single-doc operations, never in list)
+    function roomExists(roomId) {
+      return exists(/databases/$(database)/documents/rooms/$(roomId));
+    }
+
+    // =========================================================
+    // Validation Blueprints (Standalone Helpers)
+    // =========================================================
+
+    function isValidUserPublic(data) {
+      return data.keys().hasAll([
+        'id', 'username', 'avatar', 'role', 'countryCode', 'flag',
+        'level', 'coins', 'giftsReceivedCount', 'textColor', 'mood',
+        'isPrivateChatLocked', 'isPublic', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'username', 'avatar', 'role', 'countryCode', 'flag',
+        'level', 'coins', 'giftsReceivedCount', 'textColor', 'mood',
+        'birthDate', 'isPrivateChatLocked', 'isSoundEffectsMuted', 'isPublic', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.id) &&
+      data.username is string && data.username.size() >= 1 && data.username.size() <= 40 &&
+      data.avatar is string && data.avatar.size() <= 200000 &&
+      isValidRole(data.role) &&
+      data.countryCode is string && data.countryCode.size() <= 10 &&
+      data.flag is string && data.flag.size() <= 16 &&
+      data.level is number && data.level >= 1 && data.level <= 999 &&
+      data.coins is number && data.coins >= 0 && data.coins <= 100000000 &&
+      data.giftsReceivedCount is number && data.giftsReceivedCount >= 0 &&
+      data.textColor is string && data.textColor.size() <= 20 &&
+      data.mood is string && data.mood.size() <= 120 &&
+      (!('birthDate' in data) || (data.birthDate is string && data.birthDate.size() <= 20)) &&
+      data.isPrivateChatLocked is bool &&
+      (!('isSoundEffectsMuted' in data) || data.isSoundEffectsMuted is bool) &&
+      data.isPublic is bool && data.isPublic == true &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrivate(data) {
+      return data.keys().hasAll(['id', 'email', 'profilePin', 'deviceId', 'createdAt', 'updatedAt']) &&
+      data.keys().hasOnly(['id', 'email', 'profilePin', 'deviceId', 'createdAt', 'updatedAt']) &&
+      isValidId(data.id) &&
+      data.email is string && data.email.size() <= 150 &&
+      data.profilePin is string && data.profilePin.size() <= 20 &&
+      data.deviceId is string && data.deviceId.size() <= 64 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidRoleQuotas(q) {
+      return q == null || (
+        q is map &&
+        q.size() <= 4 &&
+        q.keys().hasOnly(['vip', 'admin', 'super_admin', 'member'])
+      );
+    }
+
+    function isValidMicDurations(m) {
+      return m == null || (
+        m is map &&
+        m.size() <= 6 &&
+        m.keys().hasOnly(['owner', 'vip', 'admin', 'super_admin', 'member', 'guest'])
+      );
+    }
+
+    function isValidLiveStream(s) {
+      return s is map &&
+      s.keys().hasAll([
+        'id', 'roomId', 'broadcasterId', 'broadcasterName', 'broadcasterRole',
+        'broadcasterAvatar', 'broadcasterFlag', 'startedAt', 'viewersCount',
+        'blockedUserIds', 'isCameraActive', 'isMuted'
+      ]) &&
+      s.keys().hasOnly([
+        'id', 'roomId', 'broadcasterId', 'broadcasterName', 'broadcasterRole',
+        'broadcasterAvatar', 'broadcasterFlag', 'startedAt', 'viewersCount',
+        'blockedUserIds', 'isCameraActive', 'isMuted'
+      ]) &&
+      isValidId(s.id) &&
+      isValidId(s.roomId) &&
+      isValidId(s.broadcasterId) &&
+      s.broadcasterName is string && s.broadcasterName.size() >= 1 && s.broadcasterName.size() <= 50 &&
+      isValidRole(s.broadcasterRole) &&
+      s.broadcasterAvatar is string && s.broadcasterAvatar.size() <= 200000 &&
+      s.broadcasterFlag is string && s.broadcasterFlag.size() <= 16 &&
+      s.startedAt is string && s.startedAt.size() <= 40 &&
+      s.viewersCount is number && s.viewersCount >= 0 && s.viewersCount <= 5000 &&
+      s.blockedUserIds is list && s.blockedUserIds.size() <= 200 &&
+      (s.blockedUserIds.size() == 0 || s.blockedUserIds[0] is string) &&
+      s.isCameraActive is bool &&
+      s.isMuted is bool;
+    }
+
+    function isValidRoomCore(data) {
+      return data.keys().hasAll([
+        'id', 'code', 'name', 'category', 'countryName', 'flag', 'description',
+        'ownerName', 'ownerAvatar', 'ownerId', 'ownerUid', 'occupantsCount',
+        'maxCapacity', 'isLocked', 'welcomeMessage', 'micQueue', 'isMicLocked',
+        'isPublic', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'code', 'name', 'category', 'countryName', 'countryKeywords',
+        'flag', 'description', 'ownerName', 'ownerAvatar', 'ownerId', 'ownerUid',
+        'ownerColor', 'masterPinCode', 'occupantsCount', 'maxCapacity',
+        'isLocked', 'password', 'welcomeMessage', 'activeSpeakerId', 'speakerStartedAtMs',
+        'isMicTimerPaused', 'micPausedRemainingSec', 'micQueue', 'bannerUrl', 'isGoldName',
+        'validityDays', 'expiresAt', 'expiresAtMs', 'isActive', 'roleQuotas', 'micDurations',
+        'mutedUserIds', 'isMicLocked', 'activeVideoStream', 'isPublic', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.id) &&
+      isValidId(data.ownerUid) &&
+      data.code is string && data.code.size() >= 1 && data.code.size() <= 32 &&
+      data.name is string && data.name.size() >= 1 && data.name.size() <= 200 &&
+      data.category is string && data.category.size() >= 1 && data.category.size() <= 32 &&
+      data.countryName is string && data.countryName.size() <= 100 &&
+      data.flag is string && data.flag.size() <= 32 &&
+      data.description is string && data.description.size() <= 1000 &&
+      data.ownerName is string && data.ownerName.size() >= 1 && data.ownerName.size() <= 120 &&
+      data.ownerAvatar is string && data.ownerAvatar.size() <= 250000 &&
+      data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+      data.occupantsCount is number && data.occupantsCount >= 0 && data.occupantsCount <= 5000 &&
+      data.maxCapacity is number && data.maxCapacity >= 1 && data.maxCapacity <= 5000 &&
+      data.isLocked is bool &&
+      data.welcomeMessage is string && data.welcomeMessage.size() <= 1000 &&
+      data.micQueue is list && data.micQueue.size() <= 50 &&
+      data.isMicLocked is bool &&
+      data.isPublic is bool && data.isPublic == true &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidRoomExtras(data) {
+      return (!('countryKeywords' in data) || data.countryKeywords == null || (data.countryKeywords is list && data.countryKeywords.size() <= 20)) &&
+      (!('ownerColor' in data) || data.ownerColor == null || (data.ownerColor is string && data.ownerColor.size() <= 20)) &&
+      (!('masterPinCode' in data) || data.masterPinCode == null || (data.masterPinCode is string && data.masterPinCode.size() <= 16)) &&
+      (!('password' in data) || data.password == null || (data.password is string && data.password.size() <= 40)) &&
+      (!('activeSpeakerId' in data) || data.activeSpeakerId == null || (data.activeSpeakerId is string && data.activeSpeakerId.size() <= 128)) &&
+      (!('speakerStartedAtMs' in data) || data.speakerStartedAtMs == null || (data.speakerStartedAtMs is number && data.speakerStartedAtMs >= 0)) &&
+      (!('isMicTimerPaused' in data) || data.isMicTimerPaused == null || data.isMicTimerPaused is bool) &&
+      (!('micPausedRemainingSec' in data) || data.micPausedRemainingSec == null || (data.micPausedRemainingSec is number && data.micPausedRemainingSec >= 0 && data.micPausedRemainingSec <= 86400)) &&
+      (!('bannerUrl' in data) || data.bannerUrl == null || (data.bannerUrl is string && data.bannerUrl.size() <= 250000)) &&
+      (!('isGoldName' in data) || data.isGoldName == null || data.isGoldName is bool) &&
+      (!('validityDays' in data) || data.validityDays == null || (data.validityDays is number && data.validityDays >= 0 && data.validityDays <= 3650)) &&
+      (!('expiresAt' in data) || data.expiresAt == null || (data.expiresAt is string && data.expiresAt.size() <= 64)) &&
+      (!('expiresAtMs' in data) || data.expiresAtMs == null || (data.expiresAtMs is number && data.expiresAtMs >= 0)) &&
+      (!('isActive' in data) || data.isActive == null || data.isActive is bool) &&
+      (!('roleQuotas' in data) || isValidRoleQuotas(data.roleQuotas)) &&
+      (!('micDurations' in data) || isValidMicDurations(data.micDurations)) &&
+      (!('mutedUserIds' in data) || data.mutedUserIds == null || (data.mutedUserIds is list && data.mutedUserIds.size() <= 500)) &&
+      (!('activeVideoStream' in data) || data.activeVideoStream == null || isValidLiveStream(data.activeVideoStream));
+    }
+
+    function isValidRoom(data) {
+      return isValidRoomCore(data) && isValidRoomExtras(data);
+    }
+
+    function isValidRoomParticipant(data) {
+      return data.keys().hasAll([
+        'id', 'roomId', 'username', 'avatar', 'role', 'countryCode', 'flag',
+        'level', 'coins', 'giftsReceivedCount', 'textColor', 'mood',
+        'isMuted', 'isBound', 'isPrivateChatLocked', 'joinedAt', 'lastSeenAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'roomId', 'username', 'avatar', 'role', 'countryCode', 'flag',
+        'level', 'coins', 'giftsReceivedCount', 'textColor', 'mood',
+        'isMuted', 'isBound', 'isPrivateChatLocked', 'joinedAt', 'lastSeenAt'
+      ]) &&
+      isValidId(data.id) &&
+      isValidId(data.roomId) &&
+      data.username is string && data.username.size() >= 1 && data.username.size() <= 40 &&
+      data.avatar is string && data.avatar.size() <= 200000 &&
+      isValidRole(data.role) &&
+      data.countryCode is string && data.countryCode.size() <= 10 &&
+      data.flag is string && data.flag.size() <= 16 &&
+      data.level is number && data.level >= 1 && data.level <= 999 &&
+      data.coins is number && data.coins >= 0 &&
+      data.giftsReceivedCount is number && data.giftsReceivedCount >= 0 &&
+      data.textColor is string && data.textColor.size() <= 20 &&
+      data.mood is string && data.mood.size() <= 120 &&
+      data.isMuted is bool &&
+      data.isBound is bool &&
+      data.isPrivateChatLocked is bool &&
+      data.joinedAt is timestamp &&
+      data.lastSeenAt is timestamp;
+    }
+
+    function isValidRoomCredential(data) {
+      return data.keys().hasAll([
+        'id', 'roomId', 'username', 'pinCode', 'role', 'assignedByUid', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'roomId', 'username', 'pinCode', 'role', 'deviceId', 'assignedAt', 'assignedByUid', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.id) &&
+      isValidId(data.roomId) &&
+      data.username is string && data.username.size() >= 1 && data.username.size() <= 40 &&
+      data.pinCode is string && data.pinCode.size() >= 1 && data.pinCode.size() <= 20 &&
+      isValidRole(data.role) &&
+      (!('deviceId' in data) || data.deviceId == null || (data.deviceId is string && data.deviceId.size() <= 64)) &&
+      (!('assignedAt' in data) || (data.assignedAt is string && data.assignedAt.size() <= 40)) &&
+      isValidId(data.assignedByUid) &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidRoomBan(data) {
+      return data.keys().hasAll([
+        'id', 'roomId', 'ip', 'username', 'bannedAt', 'bannedBy', 'bannedByUid', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'roomId', 'ip', 'deviceId', 'username', 'targetUid', 'bannedAt', 'bannedBy', 'bannedByUid', 'createdAt'
+      ]) &&
+      isValidId(data.id) &&
+      isValidId(data.roomId) &&
+      data.ip is string && data.ip.size() <= 64 &&
+      (!('deviceId' in data) || (data.deviceId is string && data.deviceId.size() <= 64)) &&
+      data.username is string && data.username.size() >= 1 && data.username.size() <= 40 &&
+      (!('targetUid' in data) || (data.targetUid is string && data.targetUid.size() <= 128)) &&
+      data.bannedAt is string && data.bannedAt.size() <= 40 &&
+      data.bannedBy is string && data.bannedBy.size() <= 40 &&
+      isValidId(data.bannedByUid) &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidGiftData(g) {
+      return g is map &&
+      g.keys().hasAll(['giftId', 'giftName', 'icon', 'value']) &&
+      g.keys().hasOnly(['giftId', 'giftName', 'icon', 'value', 'targetUserName']) &&
+      g.giftId is string && g.giftId.size() <= 40 &&
+      g.giftName is string && g.giftName.size() <= 60 &&
+      g.icon is string && g.icon.size() <= 16 &&
+      g.value is number && g.value >= 0 &&
+      (!('targetUserName' in g) || (g.targetUserName is string && g.targetUserName.size() <= 50));
+    }
+
+    function isValidRoomMessage(data) {
+      return data.keys().hasAll([
+        'id', 'roomId', 'senderUid', 'senderId', 'senderName', 'senderRole',
+        'senderAvatar', 'senderFlag', 'content', 'timestamp', 'type', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'roomId', 'senderUid', 'senderId', 'senderName', 'senderRole',
+        'senderAvatar', 'senderFlag', 'content', 'timestamp', 'color', 'isBold',
+        'type', 'imageUrl', 'voiceClipUrl', 'voiceDuration', 'giftData', 'createdAt'
+      ]) &&
+      isValidId(data.id) &&
+      isValidId(data.roomId) &&
+      isValidId(data.senderUid) &&
+      data.senderId is string && data.senderId.size() >= 1 && data.senderId.size() <= 128 &&
+      data.senderName is string && data.senderName.size() >= 1 && data.senderName.size() <= 50 &&
+      isValidRole(data.senderRole) &&
+      data.senderAvatar is string && data.senderAvatar.size() <= 200000 &&
+      data.senderFlag is string && data.senderFlag.size() <= 16 &&
+      data.content is string && data.content.size() <= 2000 &&
+      data.timestamp is string && data.timestamp.size() <= 40 &&
+      (!('color' in data) || data.color == null || (data.color is string && data.color.size() <= 20)) &&
+      (!('isBold' in data) || data.isBold == null || data.isBold is bool) &&
+      data.type in ['text', 'gift', 'system', 'mic_event', 'voice_clip', 'image'] &&
+      (!('imageUrl' in data) || data.imageUrl == null || (data.imageUrl is string && data.imageUrl.size() <= 500000)) &&
+      (!('voiceClipUrl' in data) || data.voiceClipUrl == null || (data.voiceClipUrl is string && data.voiceClipUrl.size() <= 500000)) &&
+      (!('voiceDuration' in data) || data.voiceDuration == null || (data.voiceDuration is number && data.voiceDuration >= 0 && data.voiceDuration <= 120)) &&
+      (!('giftData' in data) || data.giftData == null || isValidGiftData(data.giftData)) &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidRoomReport(data) {
+      return data.keys().hasAll([
+        'id', 'roomId', 'reporterId', 'reporterName',
+        'targetUserId', 'targetUsername', 'reason', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'roomId', 'reporterId', 'reporterName',
+        'targetUserId', 'targetUsername', 'reason', 'details', 'createdAt'
+      ]) &&
+      isValidId(data.id) &&
+      isValidId(data.roomId) &&
+      isValidId(data.reporterId) &&
+      data.reporterName is string && data.reporterName.size() >= 1 && data.reporterName.size() <= 50 &&
+      isValidId(data.targetUserId) &&
+      data.targetUsername is string && data.targetUsername.size() >= 1 && data.targetUsername.size() <= 50 &&
+      data.reason is string && data.reason.size() >= 1 && data.reason.size() <= 120 &&
+      (!('details' in data) || data.details == null || (data.details is string && data.details.size() <= 500)) &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidPrivateConversation(data) {
+      return data.keys().hasAll(['id', 'participantIds', 'createdAt', 'updatedAt']) &&
+      data.keys().hasOnly(['id', 'participantIds', 'lastMessage', 'lastTimestamp', 'createdAt', 'updatedAt']) &&
+      isValidId(data.id) &&
+      data.participantIds is list && data.participantIds.size() == 2 &&
+      data.participantIds[0] is string && data.participantIds[1] is string &&
+      (!('lastMessage' in data) || (data.lastMessage is string && data.lastMessage.size() <= 2000)) &&
+      (!('lastTimestamp' in data) || (data.lastTimestamp is string && data.lastTimestamp.size() <= 40)) &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidPrivateMessage(data) {
+      return data.keys().hasAll([
+        'id', 'conversationId', 'senderId', 'recipientId', 'participantIds', 'content', 'timestamp', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'conversationId', 'senderId', 'recipientId', 'participantIds', 'content', 'timestamp', 'createdAt'
+      ]) &&
+      isValidId(data.id) &&
+      isValidId(data.conversationId) &&
+      isValidId(data.senderId) &&
+      isValidId(data.recipientId) &&
+      data.participantIds is list && data.participantIds.size() == 2 &&
+      data.participantIds[0] is string && data.participantIds[1] is string &&
+      data.content is string && data.content.size() >= 1 && data.content.size() <= 2000 &&
+      data.timestamp is string && data.timestamp.size() <= 40 &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidInboxChat(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'partnerId', 'createdAt', 'updatedAt']) &&
+      data.keys().hasOnly(['id', 'ownerId', 'partnerId', 'lastMessage', 'lastTimestamp', 'createdAt', 'updatedAt']) &&
+      isValidId(data.id) &&
+      isValidId(data.ownerId) &&
+      isValidId(data.partnerId) &&
+      (!('lastMessage' in data) || (data.lastMessage is string && data.lastMessage.size() <= 2000)) &&
+      (!('lastTimestamp' in data) || (data.lastTimestamp is string && data.lastTimestamp.size() <= 40)) &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    // =========================================================
+    // Collection Match Rules
+    // =========================================================
+
+    // Admins Registry (Strictly Verified Admins Only)
+    match /admins/{adminId} {
+      allow get: if isAdmin() && isValidId(adminId);
+      allow list: if isAdmin() && resource.data.isActive == true;
+      allow create, update, delete: if isAdmin() && isValidId(adminId);
+    }
+
+    // Connection test document
+    match /test/connection {
+      allow get: if request.time != null;
+    }
+
+    // Public User Profiles (Non-PII, direct access by local/client ID)
+    match /users_public/{userId} {
+      allow get: if isValidId(userId) && (resource == null || resource.data.isPublic == true);
+      allow list: if resource.data.isPublic == true;
+      allow create: if isValidId(userId) &&
+        isValidUserPublic(incoming()) &&
+        incoming().id == userId &&
+        incoming().role in ['member', 'guest'] &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(userId) &&
+        isValidUserPublic(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            incoming().role == existing().role &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'username', 'avatar', 'countryCode', 'flag', 'textColor',
+              'mood', 'birthDate', 'isPrivateChatLocked', 'isSoundEffectsMuted',
+              'coins', 'level', 'updatedAt'
+            ])
+          ) ||
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['giftsReceivedCount', 'updatedAt']) &&
+            incoming().giftsReceivedCount >= existing().giftsReceivedCount
+          )
+        );
+      allow delete: if isAdmin() && isValidId(userId);
+
+      // Per-User Private Chat Inbox Index (Statically queryable by ownerId == userId)
+      match /inbox/{chatId} {
+        allow get: if isValidId(userId) && isValidId(chatId) && (resource == null || resource.data.ownerId == userId);
+        allow list: if resource.data.ownerId == userId;
+        allow create: if isValidId(userId) &&
+          isValidId(chatId) &&
+          isValidInboxChat(incoming()) &&
+          incoming().id == chatId &&
+          incoming().ownerId == userId &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          exists(/databases/$(database)/documents/private_chats/$(chatId));
+        allow update: if isValidId(userId) &&
+          isValidId(chatId) &&
+          isValidInboxChat(incoming()) &&
+          incoming().id == existing().id &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().partnerId == existing().partnerId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['lastMessage', 'lastTimestamp', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(chatId) && existing().ownerId == userId;
+      }
+    }
+
+    // Private User Data (PII Isolation - Strictly Verified Owner/Admin Only)
+    match /users_private/{userId} {
+      allow get: if isVerifiedUser() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if false;
+      allow create: if isVerifiedUser() &&
+        isValidId(userId) &&
+        request.auth.uid == userId &&
+        isValidUserPrivate(incoming()) &&
+        incoming().id == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser() &&
+        isValidId(userId) &&
+        (request.auth.uid == userId || isAdmin()) &&
+        isValidUserPrivate(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['profilePin', 'deviceId', 'updatedAt'])
+        );
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // Rooms Directory & Live State
+    match /rooms/{roomId} {
+      allow get: if isValidId(roomId) && (resource == null || resource.data.isPublic == true);
+      allow list: if resource.data.isPublic == true;
+      allow create: if isValidId(roomId) &&
+        isValidRoom(incoming()) &&
+        incoming().id == roomId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(roomId) &&
+        isValidRoom(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().isPublic == existing().isPublic &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'category', 'countryName', 'countryKeywords', 'flag', 'description',
+            'ownerName', 'ownerAvatar', 'ownerId', 'masterPinCode', 'maxCapacity',
+            'isLocked', 'password', 'welcomeMessage', 'isGoldName', 'validityDays',
+            'expiresAt', 'expiresAtMs', 'isActive', 'roleQuotas', 'micDurations',
+            'occupantsCount', 'activeSpeakerId', 'speakerStartedAtMs', 'isMicTimerPaused',
+            'micPausedRemainingSec', 'micQueue', 'mutedUserIds', 'isMicLocked',
+            'activeVideoStream', 'updatedAt'
+          ])
+        );
+      allow delete: if isValidId(roomId) && (isAdmin() || existing().isPublic == true);
+
+      // Room Subcollection: Real-time Participants / Presence
+      match /participants/{participantId} {
+        allow get: if isValidId(roomId) && isValidId(participantId) && (resource == null || resource.data.roomId == roomId);
+        allow list: if resource.data.roomId == roomId;
+        allow create: if isValidId(roomId) &&
+          isValidId(participantId) &&
+          isValidRoomParticipant(incoming()) &&
+          incoming().id == participantId &&
+          incoming().roomId == roomId &&
+          incoming().joinedAt == request.time &&
+          incoming().lastSeenAt == request.time &&
+          roomExists(roomId);
+        allow update: if isValidId(roomId) &&
+          isValidId(participantId) &&
+          isValidRoomParticipant(incoming()) &&
+          incoming().id == existing().id &&
+          incoming().roomId == existing().roomId &&
+          incoming().joinedAt == existing().joinedAt &&
+          incoming().lastSeenAt == request.time && (
+            isAdmin() ||
+            (
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'username', 'avatar', 'role', 'countryCode', 'flag', 'level',
+                'coins', 'giftsReceivedCount', 'textColor', 'mood',
+                'isPrivateChatLocked', 'lastSeenAt'
+              ])
+            ) ||
+            (
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'role', 'textColor', 'isMuted', 'isBound', 'giftsReceivedCount', 'lastSeenAt'
+              ])
+            ) ||
+            (
+              incoming().diff(existing()).affectedKeys().hasOnly(['giftsReceivedCount', 'lastSeenAt']) &&
+              incoming().giftsReceivedCount >= existing().giftsReceivedCount
+            )
+          );
+        allow delete: if isValidId(roomId) &&
+          isValidId(participantId) &&
+          existing().roomId == roomId;
+      }
+
+      // Room Subcollection: Rank Credentials (PINs)
+      match /credentials/{credId} {
+        allow get: if isValidId(roomId) && isValidId(credId) && (resource == null || resource.data.roomId == roomId);
+        allow list: if resource.data.roomId == roomId;
+        allow create: if isValidId(roomId) &&
+          isValidId(credId) &&
+          isValidRoomCredential(incoming()) &&
+          incoming().id == credId &&
+          incoming().roomId == roomId &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          roomExists(roomId);
+        allow update: if isValidId(roomId) &&
+          isValidId(credId) &&
+          isValidRoomCredential(incoming()) &&
+          incoming().id == existing().id &&
+          incoming().roomId == existing().roomId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'username', 'pinCode', 'role', 'deviceId', 'assignedAt', 'assignedByUid', 'updatedAt'
+          ]);
+        allow delete: if isValidId(roomId) &&
+          isValidId(credId) &&
+          existing().roomId == roomId;
+      }
+
+      // Room Subcollection: Bans
+      match /bans/{banId} {
+        allow get: if isValidId(roomId) && isValidId(banId) && (resource == null || resource.data.roomId == roomId);
+        allow list: if resource.data.roomId == roomId;
+        allow create: if isValidId(roomId) &&
+          isValidId(banId) &&
+          isValidRoomBan(incoming()) &&
+          incoming().id == banId &&
+          incoming().roomId == roomId &&
+          incoming().createdAt == request.time &&
+          roomExists(roomId);
+        allow update: if false;
+        allow delete: if isValidId(roomId) &&
+          isValidId(banId) &&
+          existing().roomId == roomId;
+      }
+
+      // Room Subcollection: Real-time Chat Messages
+      match /messages/{messageId} {
+        allow get: if isValidId(roomId) && isValidId(messageId) && (resource == null || resource.data.roomId == roomId);
+        allow list: if resource.data.roomId == roomId;
+        allow create: if isValidId(roomId) &&
+          isValidId(messageId) &&
+          isValidRoomMessage(incoming()) &&
+          incoming().id == messageId &&
+          incoming().roomId == roomId &&
+          incoming().createdAt == request.time &&
+          roomExists(roomId);
+        allow update: if false;
+        allow delete: if isValidId(roomId) &&
+          isValidId(messageId) &&
+          existing().roomId == roomId;
+      }
+
+      // Room Subcollection: User Abuse Reports
+      match /reports/{reportId} {
+        allow get: if isValidId(roomId) && isValidId(reportId) && (resource == null || resource.data.roomId == roomId);
+        allow list: if resource.data.roomId == roomId;
+        allow create: if isValidId(roomId) &&
+          isValidId(reportId) &&
+          isValidRoomReport(incoming()) &&
+          incoming().id == reportId &&
+          incoming().roomId == roomId &&
+          incoming().createdAt == request.time &&
+          roomExists(roomId);
+        allow update: if false;
+        allow delete: if isValidId(roomId) &&
+          isValidId(reportId) &&
+          isAdmin();
+      }
+    }
+
+    // 1-to-1 Private Chats
+    match /private_chats/{chatId} {
+      allow get: if isValidId(chatId) && (resource == null || resource.data.participantIds is list);
+      allow list: if false;
+      allow create: if isValidId(chatId) &&
+        isValidPrivateConversation(incoming()) &&
+        incoming().id == chatId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(chatId) &&
+        isValidPrivateConversation(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().participantIds == existing().participantIds &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['lastMessage', 'lastTimestamp', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(chatId);
+
+      match /messages/{messageId} {
+        allow get: if isValidId(chatId) && isValidId(messageId) && (resource == null || resource.data.conversationId == chatId);
+        allow list: if resource.data.conversationId == chatId;
+        allow create: if isValidId(chatId) &&
+          isValidId(messageId) &&
+          isValidPrivateMessage(incoming()) &&
+          incoming().id == messageId &&
+          incoming().conversationId == chatId &&
+          incoming().senderId in incoming().participantIds &&
+          incoming().createdAt == request.time &&
+          exists(/databases/$(database)/documents/private_chats/$(chatId)) &&
+          incoming().senderId in get(/databases/$(database)/documents/private_chats/$(chatId)).data.participantIds;
+        allow update: if false;
+        allow delete: if isValidId(chatId) &&
+          isValidId(messageId) &&
+          isAdmin();
+      }
+    }
+  }
+}

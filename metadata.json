@@ -1,0 +1,6 @@
+{
+  "name": "لقانا - دردشة صوتية وكتابية",
+  "description": "تطبيق دردشة صوتية وكتابية عربي متكامل مستوحى من تطبيق لقانا، يضم غرف الدول، منصة المايكروفون، الهدايا الفاخرة، الرتب الملكية والمحادثات الخاصة.",
+  "requestFramePermissions": ["microphone", "camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
