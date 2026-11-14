@@ -8,7 +8,7 @@ export const OfflineIndicator: React.FC = () => {
   if (isOnline) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 z-[90] flex items-center gap-2 rounded-xl bg-amber-600 border border-amber-400/50 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-lg">
+    <div className="fixed bottom-4 left-4 z-[90] flex items-center gap-2 rounded-xl bg-amber-500 dark:bg-amber-600 border border-amber-600/40 dark:border-amber-400/50 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-lg transition-colors duration-300">
       <WifiOff size={14} className="shrink-0" />
       <span>وضع عدم الاتصال — يتم عرض البيانات المحفوظة</span>
     </div>

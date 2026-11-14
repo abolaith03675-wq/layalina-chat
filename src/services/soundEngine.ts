@@ -7,7 +7,9 @@
 class SoundEngine {
   private ctx: AudioContext | null = null;
   private micStream: MediaStream | null = null;
+  private ownsMicStream: boolean = true;
   private analyser: AnalyserNode | null = null;
+  private remoteAnalyser: AnalyserNode | null = null;
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
   private effectsMuted: boolean = false;
@@ -33,6 +35,10 @@ class SoundEngine {
     } catch {
       return null;
     }
+  }
+
+  unlockAudio() {
+    this.getContext();
   }
 
   /**
@@ -324,15 +330,68 @@ class SoundEngine {
   }
 
   /**
+   * Attach an already-acquired microphone MediaStream (e.g. from WebRTC) for real-time audio level visualization
+   */
+  attachExternalMicStream(stream: MediaStream | null) {
+    if (!stream) {
+      if (!this.ownsMicStream) {
+        this.micStream = null;
+        this.analyser = null;
+      }
+      return;
+    }
+    this.micStream = stream;
+    this.ownsMicStream = false;
+    const ctx = this.getContext();
+    if (ctx) {
+      try {
+        const source = ctx.createMediaStreamSource(stream);
+        this.analyser = ctx.createAnalyser();
+        this.analyser.fftSize = 64;
+        source.connect(this.analyser);
+      } catch {
+        this.analyser = null;
+      }
+    }
+  }
+
+  /**
+   * Attach a remote WebRTC speaker MediaStream to analyze remote voice levels (not connected to destination)
+   */
+  attachRemoteSpeakerStream(stream: MediaStream | null) {
+    if (!stream) {
+      this.remoteAnalyser = null;
+      return;
+    }
+    const ctx = this.getContext();
+    if (ctx) {
+      try {
+        const source = ctx.createMediaStreamSource(stream);
+        this.remoteAnalyser = ctx.createAnalyser();
+        this.remoteAnalyser.fftSize = 64;
+        source.connect(this.remoteAnalyser);
+      } catch {
+        this.remoteAnalyser = null;
+      }
+    }
+  }
+
+  /**
    * Request Microphone stream and analyze audio levels in real-time
    */
   async startMicrophone(): Promise<boolean> {
     try {
+      if (this.micStream && this.micStream.getAudioTracks().some(t => t.readyState === 'live')) {
+        return true;
+      }
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         return false;
       }
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
       this.micStream = stream;
+      this.ownsMicStream = true;
       const ctx = this.getContext();
       if (ctx) {
         const source = ctx.createMediaStreamSource(stream);
@@ -347,10 +406,11 @@ class SoundEngine {
   }
 
   stopMicrophone() {
-    if (this.micStream) {
+    if (this.micStream && this.ownsMicStream) {
       this.micStream.getTracks().forEach(track => track.stop());
-      this.micStream = null;
     }
+    this.micStream = null;
+    this.ownsMicStream = true;
     this.analyser = null;
   }
 
@@ -358,6 +418,18 @@ class SoundEngine {
     if (!this.analyser) return 0;
     const data = new Uint8Array(this.analyser.frequencyBinCount);
     this.analyser.getByteFrequencyData(data);
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) {
+      sum += data[i];
+    }
+    const avg = sum / data.length;
+    return Math.min(100, Math.round((avg / 255) * 100));
+  }
+
+  getRemoteAudioLevel(): number {
+    if (!this.remoteAnalyser) return 0;
+    const data = new Uint8Array(this.remoteAnalyser.frequencyBinCount);
+    this.remoteAnalyser.getByteFrequencyData(data);
     let sum = 0;
     for (let i = 0; i < data.length; i++) {
       sum += data[i];

@@ -211,25 +211,25 @@ export const PreRoomEntranceModal: React.FC<PreRoomEntranceModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-slate-900 border border-amber-500/40 rounded-3xl w-full max-w-sm p-4 text-white shadow-2xl text-right">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/55 dark:bg-black/85 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="bg-white dark:bg-slate-900 border border-amber-400/60 dark:border-amber-500/40 rounded-3xl w-full max-w-sm p-4 text-slate-900 dark:text-white shadow-2xl text-right transition-colors duration-300">
         {/* Header with Room Info */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-3">
           <div className="flex items-center gap-2">
             <span className="text-2xl">{room.flag}</span>
             <div>
-              <h3 className="font-bold text-sm text-white truncate max-w-[180px]">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate max-w-[180px]">
                 {room.name}
               </h3>
-              <span className="text-[10px] text-amber-300 font-mono">
+              <span className="text-[10px] text-amber-700 dark:text-amber-300 font-mono">
                 #{room.code} • الماستر:{' '}
-                <strong className="text-red-500">{room.ownerName}</strong>
+                <strong className="text-red-600 dark:text-red-500">{room.ownerName}</strong>
               </span>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1"
+            className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-1"
           >
             ✕
           </button>
@@ -239,18 +239,18 @@ export const PreRoomEntranceModal: React.FC<PreRoomEntranceModalProps> = ({
         <form onSubmit={handleSubmit} autoComplete="off" className="space-y-3.5 text-xs">
           {/* 1. First Field: Username + Saved Accounts Selector & Save Icon */}
           <div ref={usernameFieldWrapperRef} className="relative">
-            <label className="block mb-1 text-slate-300 font-bold flex items-center justify-between">
+            <label className="block mb-1 text-slate-700 dark:text-slate-300 font-bold flex items-center justify-between">
               <span>اسم المستخدم (اسم الدخول):</span>
-              <span className="text-[10px] text-amber-400 font-normal flex items-center gap-1.5">
+              <span className="text-[10px] text-amber-700 dark:text-amber-400 font-normal flex items-center gap-1.5">
                 {savedFeedback && (
-                  <span className="text-emerald-400 font-bold">✓ تم حفظ الاسم والرمز</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓ تم حفظ الاسم والرمز</span>
                 )}
                 <span>مطلوب</span>
               </span>
             </label>
             <div className="flex items-center gap-1.5">
               <div className="relative flex-1 flex items-center">
-                <User size={15} className="absolute right-3 text-slate-500 pointer-events-none" />
+                <User size={15} className="absolute right-3 text-slate-400 dark:text-slate-500 pointer-events-none" />
                 <input
                   type="text"
                   name="room_entrance_nickname"
@@ -268,18 +268,18 @@ export const PreRoomEntranceModal: React.FC<PreRoomEntranceModalProps> = ({
                     setErrorMessage('');
                   }}
                   placeholder="اكتب اسمك المستعار للدخول..."
-                  className="w-full bg-slate-950 border border-slate-700 focus:border-amber-400 rounded-xl pr-9 pl-8 py-2 text-xs text-white placeholder:text-slate-600 outline-none font-bold"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-amber-500 dark:focus:border-amber-400 rounded-xl pr-9 pl-8 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 outline-none font-bold"
                 />
                 {savedAccounts.length > 0 && (
                   <button
                     type="button"
                     onClick={() => setShowSavedList(prev => !prev)}
-                    className="absolute left-2 p-1 rounded-lg text-slate-400 hover:text-amber-300 transition-colors"
+                    className="absolute left-2 p-1 rounded-lg text-slate-500 dark:text-slate-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
                     title="الأسماء والحسابات المحفوظة"
                   >
                     <ChevronDown
                       size={14}
-                      className={`transition-transform duration-150 ${showSavedList ? 'rotate-180 text-amber-400' : ''}`}
+                      className={`transition-transform duration-150 ${showSavedList ? 'rotate-180 text-amber-600 dark:text-amber-400' : ''}`}
                     />
                   </button>
                 )}
@@ -290,8 +290,8 @@ export const PreRoomEntranceModal: React.FC<PreRoomEntranceModalProps> = ({
                 onClick={handleSaveCurrentAccount}
                 className={`p-2 rounded-xl border transition-all active:scale-95 shrink-0 flex items-center justify-center ${
                   savedFeedback
-                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
-                    : 'bg-slate-950 border-slate-700 hover:border-amber-400/70 text-amber-400 hover:bg-slate-800'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-400 dark:border-emerald-500/50 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-400/70 text-amber-600 dark:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
                 title="حفظ الاسم والرمز السري معاً على هذا الجهاز"
               >
@@ -300,13 +300,13 @@ export const PreRoomEntranceModal: React.FC<PreRoomEntranceModalProps> = ({
             </div>
 
             {showSavedList && savedAccounts.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-slate-950 border border-amber-500/40 rounded-xl shadow-2xl max-h-40 overflow-y-auto divide-y divide-slate-800/80">
-                <div className="px-2.5 py-1.5 bg-slate-900/90 text-[10px] text-amber-300 font-bold flex items-center justify-between sticky top-0">
+              <div className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-white dark:bg-slate-950 border border-amber-400/60 dark:border-amber-500/40 rounded-xl shadow-2xl max-h-40 overflow-y-auto divide-y divide-slate-200 dark:divide-slate-800/80">
+                <div className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900/90 text-[10px] text-amber-700 dark:text-amber-300 font-bold flex items-center justify-between sticky top-0">
                   <span>الحسابات والأسماء المحفوظة ({savedAccounts.length})</span>
                   <button
                     type="button"
                     onClick={() => setShowSavedList(false)}
-                    className="text-slate-400 hover:text-white"
+                    className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                   >
                     ✕
                   </button>
@@ -316,13 +316,13 @@ export const PreRoomEntranceModal: React.FC<PreRoomEntranceModalProps> = ({
                     key={acc.id}
                     onMouseDown={e => e.preventDefault()}
                     onClick={() => handleSelectSavedAccount(acc)}
-                    className="flex items-center justify-between px-2.5 py-2 hover:bg-slate-800/80 cursor-pointer transition-colors gap-2"
+                    className="flex items-center justify-between px-2.5 py-2 hover:bg-slate-100 dark:hover:bg-slate-800/80 cursor-pointer transition-colors gap-2"
                   >
                     <div className="min-w-0 flex-1">
-                      <span className="text-xs font-bold text-white block truncate">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white block truncate">
                         {acc.username}
                       </span>
-                      <span className="text-[10px] text-slate-400 block">
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
                         {acc.pinCode
                           ? `🔑 محفوظ مع الرمز السري (${'•'.repeat(Math.min(6, acc.pinCode.length))})`
                           : '👤 اسم فقط بدون رمز'}
@@ -332,7 +332,7 @@ export const PreRoomEntranceModal: React.FC<PreRoomEntranceModalProps> = ({
                       type="button"
                       onMouseDown={e => e.stopPropagation()}
                       onClick={e => handleDeleteSavedAccount(e, acc.id)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/50 transition-colors shrink-0"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors shrink-0"
                       title="حذف من المحفوظات"
                     >
                       <Trash2 size={14} />
@@ -345,13 +345,13 @@ export const PreRoomEntranceModal: React.FC<PreRoomEntranceModalProps> = ({
 
           {/* 2. Second Field: Secret PIN Code for Ranks & Authentication */}
           <div>
-            <label className="block mb-1 text-slate-300 font-bold flex items-center justify-between">
+            <label className="block mb-1 text-slate-700 dark:text-slate-300 font-bold flex items-center justify-between">
               <span>الرمز السري (مخصص لأصحاب الرتب والمصادقة):</span>
-              <span className="text-[10px] text-slate-400 font-normal">اختياري للزوار</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">اختياري للزوار</span>
             </label>
             <div className="flex items-center gap-1.5">
               <div className="relative flex-1 flex items-center">
-                <KeyRound size={15} className="absolute right-3 text-slate-500 pointer-events-none" />
+                <KeyRound size={15} className="absolute right-3 text-slate-400 dark:text-slate-500 pointer-events-none" />
                 <input
                   type={showPinText ? 'text' : 'password'}
                   name="room_rank_pin_entry"
@@ -365,12 +365,12 @@ export const PreRoomEntranceModal: React.FC<PreRoomEntranceModalProps> = ({
                     setErrorMessage('');
                   }}
                   placeholder="أدخل الرمز السري إذا كنت ماستر أو صاحب رتبة..."
-                  className="w-full bg-slate-950 border border-slate-700 focus:border-amber-400 rounded-xl pr-9 pl-8 py-2 text-xs text-amber-300 font-mono placeholder:text-slate-600 outline-none tracking-wider"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-amber-500 dark:focus:border-amber-400 rounded-xl pr-9 pl-8 py-2 text-xs text-amber-700 dark:text-amber-300 font-mono placeholder:text-slate-400 dark:placeholder:text-slate-600 outline-none tracking-wider"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPinText(prev => !prev)}
-                  className="absolute left-2 p-1 rounded-lg text-slate-500 hover:text-amber-300 transition-colors"
+                  className="absolute left-2 p-1 rounded-lg text-slate-400 dark:text-slate-500 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
                   title={showPinText ? 'إخفاء الرمز' : 'إظهار الرمز'}
                 >
                   {showPinText ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -381,8 +381,8 @@ export const PreRoomEntranceModal: React.FC<PreRoomEntranceModalProps> = ({
                 onClick={handleSaveCurrentAccount}
                 className={`p-2 rounded-xl border transition-all active:scale-95 shrink-0 flex items-center justify-center ${
                   savedFeedback
-                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
-                    : 'bg-slate-950 border-slate-700 hover:border-amber-400/70 text-amber-400 hover:bg-slate-800'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-400 dark:border-emerald-500/50 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-400/70 text-amber-600 dark:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
                 title="حفظ الاسم والرمز معاً"
               >
@@ -394,9 +394,9 @@ export const PreRoomEntranceModal: React.FC<PreRoomEntranceModalProps> = ({
           {/* Room Password Field if Locked */}
           {room.isLocked && (
             <div>
-              <label className="block mb-1 text-red-300 font-bold flex items-center justify-between">
+              <label className="block mb-1 text-red-700 dark:text-red-300 font-bold flex items-center justify-between">
                 <span>الغرفة مقفلة بكلمة سر للزوار:</span>
-                <Lock size={12} className="text-red-400" />
+                <Lock size={12} className="text-red-600 dark:text-red-400" />
               </label>
               <input
                 type="password"
@@ -407,42 +407,42 @@ export const PreRoomEntranceModal: React.FC<PreRoomEntranceModalProps> = ({
                   setErrorMessage('');
                 }}
                 placeholder="أدخل كلمة سر الغرفة..."
-                className="w-full bg-slate-950 border border-red-500/50 focus:border-red-400 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-red-300 dark:border-red-500/50 focus:border-red-500 dark:focus:border-red-400 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
               />
             </div>
           )}
 
           {/* Role Detection Live Indicator */}
-          <div className="bg-slate-950/90 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between">
-            <span className="text-[11px] text-slate-400">الرتبة التي ستدخل بها:</span>
+          <div className="bg-slate-50 dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 flex items-center justify-between">
+            <span className="text-[11px] text-slate-600 dark:text-slate-400">الرتبة التي ستدخل بها:</span>
             <div className="flex items-center gap-1.5">
               <UserBadge role={detected.role} size="sm" />
               {detected.verified && pinCode && (
-                <CheckCircle2 size={13} className="text-emerald-400" />
+                <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" />
               )}
             </div>
           </div>
 
           {detected.masterRejectedReason && (
-            <div className="p-2 bg-red-950/60 border border-red-500/50 rounded-xl text-red-300 text-[11px] flex items-center gap-1.5">
-              <ShieldAlert size={14} className="shrink-0 text-red-400" />
+            <div className="p-2 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-500/50 rounded-xl text-red-700 dark:text-red-300 text-[11px] flex items-center gap-1.5">
+              <ShieldAlert size={14} className="shrink-0 text-red-600 dark:text-red-400" />
               <span>{detected.masterRejectedReason}</span>
             </div>
           )}
 
           {errorMessage && (
-            <div className="p-2 bg-red-950/60 border border-red-500/50 rounded-xl text-red-300 text-xs flex items-center gap-1.5">
-              <ShieldAlert size={14} className="shrink-0 text-red-400" />
+            <div className="p-2 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-500/50 rounded-xl text-red-700 dark:text-red-300 text-xs flex items-center gap-1.5">
+              <ShieldAlert size={14} className="shrink-0 text-red-600 dark:text-red-400" />
               <span>{errorMessage}</span>
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 rounded-xl text-slate-400 hover:text-white text-xs"
+              className="px-3 py-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-xs"
             >
               إلغاء
             </button>
@@ -459,9 +459,9 @@ export const PreRoomEntranceModal: React.FC<PreRoomEntranceModalProps> = ({
             <button
               type="button"
               onClick={() => setShowPrivacyModal(true)}
-              className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-amber-300 transition-colors underline-offset-4 hover:underline"
+              className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors underline-offset-4 hover:underline"
             >
-              <ShieldCheck size={12} className="text-amber-400/80" />
+              <ShieldCheck size={12} className="text-amber-600 dark:text-amber-400/80" />
               <span>الشروط وسياسة الخصوصية</span>
             </button>
           </div>

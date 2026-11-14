@@ -9,6 +9,78 @@ export const ROLE_HIERARCHY: Record<UserRole, { level: number; label: string; co
   guest: { level: 1, label: 'زائر', color: 'text-slate-400', hex: '#94a3b8' },
 };
 
+export function normalizeUserRole(rawRole?: string | null): UserRole {
+  const val = (rawRole || '').trim().toLowerCase();
+  if (
+    val === 'owner' ||
+    val === 'master' ||
+    val === 'general_master' ||
+    val === 'ماستر' ||
+    val === 'الماستر' ||
+    val === 'الماستر العام' ||
+    val === 'ماستر مشارك' ||
+    val === 'ماستر الروم'
+  ) {
+    return 'owner';
+  }
+  if (val === 'vip' || val === 'v.i.p' || val === 'مميز' || val === 'مميز v.i.p') {
+    return 'vip';
+  }
+  if (val === 'admin' || val === 'مشرف' || val === 'ادمن' || val === 'أدمن') {
+    return 'admin';
+  }
+  if (
+    val === 'super_admin' ||
+    val === 'superadmin' ||
+    val === 'super-admin' ||
+    val === 'سوبر أدمن' ||
+    val === 'سوبر ادمن'
+  ) {
+    return 'super_admin';
+  }
+  if (val === 'member' || val === 'عضو') {
+    return 'member';
+  }
+  return 'guest';
+}
+
+export function getRoleLevel(role?: string | null): number {
+  const normalized = normalizeUserRole(role);
+  return ROLE_HIERARCHY[normalized]?.level || 1;
+}
+
+export function isMasterRole(role?: string | null): boolean {
+  return normalizeUserRole(role) === 'owner';
+}
+
+export function isRoomAdminRole(role?: string | null): boolean {
+  const normalized = normalizeUserRole(role);
+  return (
+    normalized === 'owner' ||
+    normalized === 'vip' ||
+    normalized === 'admin' ||
+    normalized === 'super_admin'
+  );
+}
+
+export function canModerateTarget(
+  actorRole?: string | null,
+  targetRole?: string | null,
+  options?: { isSelf?: boolean; isGeneralMaster?: boolean }
+): boolean {
+  const normalizedActor = normalizeUserRole(actorRole);
+  if (normalizedActor === 'owner' || (options?.isGeneralMaster && normalizedActor !== 'guest')) {
+    return true;
+  }
+  if (!isRoomAdminRole(normalizedActor)) {
+    return false;
+  }
+  if (options?.isSelf) {
+    return false;
+  }
+  return getRoleLevel(normalizedActor) > getRoleLevel(targetRole);
+}
+
 export interface UserProfile {
   id: string;
   username: string;
@@ -62,6 +134,8 @@ export interface RoomCredential {
   assignedByUid?: string;
 }
 
+export type BanType = 'ip' | 'device' | 'both';
+
 export interface BannedUserEntry {
   id?: string;
   roomId?: string;
@@ -69,6 +143,8 @@ export interface BannedUserEntry {
   deviceId?: string;
   username: string;
   targetUid?: string;
+  banType?: BanType;
+  reason?: string;
   bannedAt: string;
   bannedBy: string;
   bannedByUid?: string;
@@ -137,8 +213,30 @@ export interface Room {
   bannedUsers?: BannedUserEntry[];
   mutedUserIds?: string[];
   isMicLocked?: boolean;
+  reportsAllowedUsers?: string[]; // User IDs or usernames granted access to Supervisor Reports by Master
+  reportsAllowedRoles?: UserRole[]; // Specific non-owner roles granted access to Supervisor Reports by Master
   activeVideoStream?: LiveVideoStream | null;
+  micSessionId?: string | null;
+  lastKickEvent?: {
+    targetUid: string;
+    targetName: string;
+    kickedBy: string;
+    kickedAtMs: number;
+  } | null;
+  lastBroadcastEvent?: RoomBroadcastEvent | null;
   isPublic?: boolean;
+}
+
+export interface WebRtcSignalDoc {
+  id: string;
+  roomId: string;
+  sessionId: string;
+  fromUid: string;
+  toUid: string;
+  type: 'offer' | 'answer';
+  sdp: string;
+  iceCandidates: string[];
+  createdAtMs?: number;
 }
 
 export interface LiveVideoStream {
@@ -222,4 +320,109 @@ export interface AbuseReport {
   reason: string;
   details?: string;
   createdAtMs?: number;
+}
+
+export type RoomBroadcastCategory =
+  | 'enter'
+  | 'leave'
+  | 'bind'
+  | 'unbind'
+  | 'gift'
+  | 'ban'
+  | 'ban_ip'
+  | 'ban_device'
+  | 'ban_both'
+  | 'unban'
+  | 'kick'
+  | 'mute'
+  | 'unmute'
+  | 'admin';
+
+export interface RoomBroadcastGiftData {
+  giftId: string;
+  giftName: string;
+  icon: string;
+  value: number;
+  senderName: string;
+  recipientName: string;
+}
+
+export interface RoomBroadcastEvent {
+  id: string;
+  category: RoomBroadcastCategory;
+  title: string;
+  message: string;
+  actorName: string;
+  targetName?: string;
+  giftData?: RoomBroadcastGiftData;
+  createdAtMs: number;
+}
+
+export type RoomLogAction =
+  | 'enter'
+  | 'leave'
+  | 'kicked'
+  | 'banned'
+  | 'ban_ip'
+  | 'ban_device'
+  | 'ban_both'
+  | 'unbanned'
+  | 'bind'
+  | 'unbind'
+  | 'gift'
+  | 'mute'
+  | 'unmute'
+  | 'admin';
+
+export interface RoomLogEntry {
+  id: string;
+  roomId: string;
+  userId: string;
+  username: string;
+  userRole: UserRole;
+  userFlag: string;
+  userAvatar?: string;
+  action: RoomLogAction;
+  details?: string;
+  ipAddress?: string;
+  deviceId?: string;
+  timestamp: string;
+  createdAtMs: number;
+}
+
+export type SupervisorActionType =
+  | 'mute'
+  | 'unmute'
+  | 'kick'
+  | 'ban_ip'
+  | 'ban_device'
+  | 'ban_both'
+  | 'unban'
+  | 'bind'
+  | 'unbind'
+  | 'revoke_mic'
+  | 'renew_mic'
+  | 'freeze_mic'
+  | 'unfreeze_mic'
+  | 'clear_chat'
+  | 'lock_mic'
+  | 'unlock_mic'
+  | 'assign_rank'
+  | 'remove_rank'
+  | 'give_mic'
+  | 'reports_permission';
+
+export interface SupervisorReportEntry {
+  id: string;
+  roomId: string;
+  actorUid: string;
+  actorName: string;
+  actorRole: UserRole;
+  actionType: SupervisorActionType;
+  actionLabel: string;
+  targetUid?: string;
+  targetName?: string;
+  details?: string;
+  timestamp: string;
+  createdAtMs: number;
 }

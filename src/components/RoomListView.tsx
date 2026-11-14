@@ -20,6 +20,8 @@ import {
   Trash2,
   AlertTriangle,
   ShieldCheck,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { Room, RoomCategory, UserProfile, RoleQuotas } from '../types/loqana';
 import {
@@ -29,6 +31,7 @@ import {
   isRoomExpired,
 } from '../services/firebaseService';
 import { PrivacyTermsModal } from './PrivacyTermsModal';
+import { useTheme } from '../context/ThemeContext';
 
 interface RoomListViewProps {
   rooms: Room[];
@@ -93,6 +96,7 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
   onDeleteRoom,
   onOpenProfile,
 }) => {
+  const { isDarkMode, toggleTheme } = useTheme();
   const [selectedCategory, setSelectedCategory] = useState<RoomCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const countriesScrollRef = useRef<HTMLDivElement>(null);
@@ -415,11 +419,11 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#070a12] text-white overflow-hidden text-right select-none">
+    <div className="flex-1 flex flex-col h-full bg-slate-100 dark:bg-[#070a12] text-slate-900 dark:text-white overflow-hidden text-right select-none transition-colors duration-300">
       {/* Lobby Brand Header */}
-      <header className="bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 px-4 py-3 border-b border-amber-500/20 flex items-center justify-between gap-2 shadow-lg">
+      <header className="bg-white dark:bg-transparent dark:bg-gradient-to-b dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 px-4 py-3 border-b border-slate-300 dark:border-amber-500/20 flex items-center justify-between gap-2 shadow-sm dark:shadow-lg transition-colors duration-300">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-10 h-10 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg shadow-purple-500/20 border border-purple-400/30 bg-[#070a12] shrink-0">
+          <div className="w-10 h-10 rounded-2xl overflow-hidden flex items-center justify-center shadow-md shadow-purple-500/15 dark:shadow-purple-500/20 border border-purple-300 dark:border-purple-400/30 bg-slate-950 dark:bg-[#070a12] shrink-0">
             <img
               src="/assets/aistudio/________7b81d3a3.png"
               alt="شعار دردشة ليالينا الصوتية"
@@ -428,59 +432,75 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <h1 className="text-base font-black tracking-wide bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-200 bg-clip-text text-transparent truncate">
+              <h1 className="text-base font-black tracking-wide bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-600 dark:from-amber-200 dark:via-amber-400 dark:to-yellow-200 bg-clip-text text-transparent truncate">
                 دردشة ليالينا الصوتية
               </h1>
-              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-red-600/30 text-red-300 border border-red-500/40 shrink-0">
+              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-red-50 text-red-600 border border-red-200 dark:bg-red-600/30 dark:text-red-300 dark:border-red-500/40 shrink-0">
                 LIVE
               </span>
             </div>
-            <p className="text-[10px] text-slate-400">
-              المتواجدون الآن: <strong className="text-amber-400 font-mono">{totalOnline}</strong> عضو
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">
+              المتواجدون الآن: <strong className="text-amber-600 dark:text-amber-400 font-mono">{totalOnline}</strong> عضو
             </p>
           </div>
         </div>
 
-        {/* User Profile Mini Bar */}
-        <button
-          onClick={onOpenProfile}
-          className="flex items-center justify-center gap-2 p-1 sm:p-1.5 sm:pr-2.5 rounded-[50%] sm:rounded-full aspect-square sm:aspect-auto shrink-0 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 active:scale-95 transition-all text-right"
-        >
-          <div className="text-right hidden sm:block">
-            <span className="text-xs font-bold text-white block max-w-[90px] truncate">
-              {currentUser.username}
-            </span>
-            <span className="text-[10px] text-amber-400 font-mono">
-              {currentUser.coins.toLocaleString('ar-SA')} 🪙
-            </span>
-          </div>
-          <div className="relative w-8 h-8 rounded-[50%] shrink-0">
-            <img
-              src={currentUser.avatar}
-              alt={currentUser.username}
-              referrerPolicy="no-referrer"
-              className="w-8 h-8 rounded-[50%] aspect-square object-cover border border-amber-400 block"
-            />
-            <span className="absolute -bottom-1 -left-1 text-xs">{currentUser.flag}</span>
-          </div>
-        </button>
+        {/* Theme Toggle + User Profile Mini Bar */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-[50%] aspect-square flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-amber-400 shadow-xs active:scale-95 transition-all duration-300 shrink-0"
+            title={isDarkMode ? 'التبديل إلى الوضع النهاري الأبيض' : 'التبديل إلى الوضع الليلي الداكن'}
+            aria-label={isDarkMode ? 'التبديل إلى الوضع النهاري الأبيض' : 'التبديل إلى الوضع الليلي الداكن'}
+          >
+            {isDarkMode ? (
+              <Sun size={18} className="text-amber-400 transition-transform duration-300 rotate-0" />
+            ) : (
+              <Moon size={18} className="text-slate-700 transition-transform duration-300 rotate-0" />
+            )}
+          </button>
+
+          <button
+            onClick={onOpenProfile}
+            className="flex items-center justify-center gap-2 p-1 sm:p-1.5 sm:pr-2.5 rounded-[50%] sm:rounded-full aspect-square sm:aspect-auto shrink-0 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 active:scale-95 transition-all text-right"
+          >
+            <div className="text-right hidden sm:block">
+              <span className="text-xs font-bold text-slate-900 dark:text-white block max-w-[90px] truncate">
+                {currentUser.username}
+              </span>
+              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-mono">
+                {currentUser.coins.toLocaleString('ar-SA')} 🪙
+              </span>
+            </div>
+            <div className="relative w-8 h-8 rounded-[50%] shrink-0">
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.username}
+                referrerPolicy="no-referrer"
+                className="w-8 h-8 rounded-[50%] aspect-square object-cover border border-amber-500 dark:border-amber-400 block"
+              />
+              <span className="absolute -bottom-1 -left-1 text-xs">{currentUser.flag}</span>
+            </div>
+          </button>
+        </div>
       </header>
 
       {/* Search & Create Room Bar */}
-      <div className="p-3 bg-slate-950/80 border-b border-slate-800/90 flex items-center gap-2">
+      <div className="p-3 bg-white dark:bg-slate-950/80 border-b border-slate-300 dark:border-slate-800/90 flex items-center gap-2 transition-colors duration-300">
         <div className="flex-1 relative flex items-center">
-          <Search size={15} className="absolute right-3 text-amber-400/80" />
+          <Search size={15} className="absolute right-3 text-amber-600 dark:text-amber-400/80" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="ابحث باسم أي دولة (مصر، العراق، السعودية، سوريا...) أو برقم الروم..."
-            className="w-full bg-slate-900 border border-slate-800 focus:border-amber-500/60 rounded-xl pr-9 pl-8 py-2 text-xs text-white placeholder:text-slate-500 outline-none transition-colors"
+            className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 focus:border-amber-500 dark:focus:border-amber-500/60 rounded-xl pr-9 pl-8 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none transition-colors"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute left-2.5 text-slate-400 hover:text-white p-0.5"
+              className="absolute left-2.5 text-slate-400 hover:text-slate-700 dark:hover:text-white p-0.5"
               title="مسح البحث"
             >
               <X size={14} />
@@ -491,7 +511,7 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
         {/* Create Room Button (Owner Only - Requires ezez1976) */}
         <button
           onClick={handleOpenCreateRoom}
-          className="py-2 px-3 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-red-900/30 active:scale-95 transition-all shrink-0 border border-red-400/40"
+          className="py-2 px-3 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-red-900/20 dark:shadow-red-900/30 active:scale-95 transition-all shrink-0 border border-red-400/40"
           title="خاص بمالك التطبيق فقط (يتطلب رمز سري)"
         >
           <KeyRound size={14} className="text-yellow-300" />
@@ -500,11 +520,11 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
       </div>
 
       {/* 1. Fully Horizontal Scrollable Countries Navigation Bar */}
-      <div className="relative bg-slate-950 border-b border-slate-800/80 px-1 py-2 flex items-center">
+      <div className="relative bg-white dark:bg-slate-950 border-b border-slate-300 dark:border-slate-800/80 px-1 py-2 flex items-center transition-colors duration-300">
         {/* Right Scroll Arrow (Desktop/Touch Helper) */}
         <button
           onClick={() => scrollCountries('right')}
-          className="hidden md:flex p-1 rounded-full bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white shrink-0 mx-1 z-10 border border-slate-800 shadow-sm"
+          className="hidden md:flex p-1 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white shrink-0 mx-1 z-10 border border-slate-300 dark:border-slate-800 shadow-sm transition-colors"
           title="تمرير لليمين"
         >
           <ChevronRight size={16} />
@@ -513,8 +533,7 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
         {/* Scrollable Container */}
         <div
           ref={countriesScrollRef}
-          className="flex-1 flex items-center gap-2 overflow-x-auto scroll-smooth scrollbar-thin scrollbar-thumb-slate-700/60 pb-1 px-2 select-none"
-          style={{ WebkitOverflowScrolling: 'touch' }}
+          className="flex-1 flex items-center gap-2 touch-scroll-x py-0.5 px-2 select-none"
         >
           {COUNTRIES_LIST.map(country => {
             const isSelected = selectedCategory === country.id && !searchQuery;
@@ -523,18 +542,18 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                 key={country.id}
                 onClick={() => {
                   setSelectedCategory(country.id);
-                  setSearchQuery(''); // clear search when explicitly selecting a country tab
+                  setSearchQuery('');
                 }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border shrink-0 transition-all text-xs whitespace-nowrap active:scale-95 ${
                   isSelected
-                    ? 'bg-gradient-to-r from-amber-500/25 to-yellow-500/20 border-amber-400 text-amber-300 font-bold shadow-sm shadow-amber-500/10'
-                    : 'bg-slate-900/90 hover:bg-slate-850 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
+                    ? 'bg-gradient-to-r from-amber-500/15 to-yellow-500/15 dark:from-amber-500/25 dark:to-yellow-500/20 border-amber-500 dark:border-amber-400 text-amber-700 dark:text-amber-300 font-bold shadow-sm shadow-amber-500/10'
+                    : 'bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-900/90 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:border-slate-400 dark:hover:border-slate-700'
                 }`}
               >
                 <span className="text-base shrink-0">{country.flag}</span>
                 <span className="font-semibold">{country.label}</span>
                 {country.code !== 'ALL' && country.code !== 'FUN' && (
-                  <span className="text-[10px] font-mono text-slate-400 font-normal">
+                  <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 font-normal">
                     {country.code}
                   </span>
                 )}
@@ -546,7 +565,7 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
         {/* Left Scroll Arrow (Desktop/Touch Helper) */}
         <button
           onClick={() => scrollCountries('left')}
-          className="hidden md:flex p-1 rounded-full bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white shrink-0 mx-1 z-10 border border-slate-800 shadow-sm"
+          className="hidden md:flex p-1 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white shrink-0 mx-1 z-10 border border-slate-200 dark:border-slate-800 shadow-sm transition-colors"
           title="تمرير لليسار"
         >
           <ChevronLeft size={16} />
@@ -555,16 +574,16 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
 
       {/* Active Search Results Indicator Banner */}
       {searchQuery && (
-        <div className="bg-amber-950/40 border-b border-amber-500/30 px-3 py-1.5 text-xs text-amber-200 flex items-center justify-between">
+        <div className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-500/30 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200 flex items-center justify-between transition-colors">
           <div className="flex items-center gap-2">
-            <Compass size={14} className="text-amber-400" />
+            <Compass size={14} className="text-amber-600 dark:text-amber-400" />
             <span>
               نتائج البحث عن «<strong>{searchQuery}</strong>»: ({filteredRooms.length} غرفة متاحة)
             </span>
           </div>
           <button
             onClick={() => setSearchQuery('')}
-            className="text-[11px] text-amber-400 hover:underline flex items-center gap-0.5 font-bold"
+            className="text-[11px] text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-0.5 font-bold"
           >
             <span>مسح البحث</span>
             <X size={12} />
@@ -576,12 +595,12 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
       <div className="flex-1 p-3 overflow-y-auto space-y-2.5">
         {filteredRooms.length === 0 ? (
           rooms.length === 0 ? (
-            <div className="p-8 text-center bg-slate-900/50 border border-amber-500/25 rounded-2xl text-slate-300 text-xs space-y-3">
-              <Crown size={38} className="mx-auto text-amber-400/80" />
-              <p className="font-black text-white text-sm">
+            <div className="p-8 text-center bg-white dark:bg-slate-900/50 border-[1.5px] dark:border border-amber-400 dark:border-amber-500/25 rounded-2xl text-slate-700 dark:text-slate-300 text-xs space-y-3 shadow-sm">
+              <Crown size={38} className="mx-auto text-amber-500 dark:text-amber-400/80" />
+              <p className="font-black text-slate-900 dark:text-white text-sm">
                 لا توجد غرف حقيقية متاحة حالياً
               </p>
-              <p className="text-slate-400 text-[11px] max-w-xs mx-auto leading-relaxed">
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] max-w-xs mx-auto leading-relaxed">
                 يعرض التطبيق فقط الغرف الحقيقية المنشأة في قاعدة البيانات. يمكن لمالك التطبيق إنشاء أول غرفة الآن.
               </p>
               <button
@@ -593,12 +612,12 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
               </button>
             </div>
           ) : searchQuery ? (
-            <div className="p-8 text-center bg-slate-900/40 border border-slate-800 rounded-2xl text-slate-400 text-xs space-y-3">
-              <Compass size={36} className="mx-auto text-amber-500/50" />
-              <p className="font-bold text-white text-sm">
+            <div className="p-8 text-center bg-white dark:bg-slate-900/40 border-[1.5px] dark:border border-slate-300 dark:border-slate-800 rounded-2xl text-slate-500 dark:text-slate-400 text-xs space-y-3 shadow-sm">
+              <Compass size={36} className="mx-auto text-amber-500/70 dark:text-amber-500/50" />
+              <p className="font-bold text-slate-900 dark:text-white text-sm">
                 لم نجد غرفاً مطابقة لـ «{searchQuery}»
               </p>
-              <p className="text-slate-400 text-[11px] max-w-xs mx-auto leading-relaxed">
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] max-w-xs mx-auto leading-relaxed">
                 يمكنك البحث باسم الدولة أو اسم الغرفة أو اسم الماستر أو رقم الروم.
               </p>
               <button
@@ -609,9 +628,9 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
               </button>
             </div>
           ) : (
-            <div className="p-8 text-center bg-slate-900/40 border border-slate-800 rounded-2xl text-slate-400 text-xs space-y-3">
-              <Compass size={36} className="mx-auto text-amber-500/50" />
-              <p className="font-bold text-white text-sm">
+            <div className="p-8 text-center bg-white dark:bg-slate-900/40 border-[1.5px] dark:border border-slate-300 dark:border-slate-800 rounded-2xl text-slate-500 dark:text-slate-400 text-xs space-y-3 shadow-sm">
+              <Compass size={36} className="mx-auto text-amber-500/70 dark:text-amber-500/50" />
+              <p className="font-bold text-slate-900 dark:text-white text-sm">
                 لا توجد غرف في قسم «{COUNTRIES_LIST.find(c => c.id === selectedCategory)?.label || selectedCategory}» حالياً
               </p>
               <button
@@ -630,12 +649,12 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
             <div
               key={room.id}
               onClick={() => onSelectRoom(room)}
-              className={`group border rounded-2xl p-3 shadow-md hover:shadow-xl transition-all cursor-pointer relative overflow-hidden ${
+              className={`group border-[1.5px] dark:border rounded-2xl p-3 hover:shadow-lg transition-all cursor-pointer relative overflow-hidden ${
                 expired
-                  ? 'bg-slate-900/60 border-red-900/50 opacity-75'
+                  ? 'bg-slate-100 dark:bg-slate-900/60 border-red-400 dark:border-red-900/50 opacity-75 shadow-sm'
                   : room.isGoldName
-                  ? 'bg-gradient-to-r from-amber-950/40 via-slate-900/90 to-slate-950 border-amber-500/50 hover:border-amber-400 shadow-amber-500/10'
-                  : 'bg-gradient-to-r from-slate-900/90 via-slate-900/80 to-slate-950 border-slate-800/80 hover:border-amber-500/40'
+                  ? 'bg-gradient-to-r from-amber-50 via-white to-amber-50/80 dark:from-amber-950/40 dark:via-slate-900/90 dark:to-slate-950 border-amber-500 dark:border-amber-500/50 hover:border-amber-600 dark:hover:border-amber-400 shadow-[0_2px_10px_rgba(245,158,11,0.14)] dark:shadow-lg dark:shadow-amber-500/10'
+                  : 'bg-white dark:bg-transparent dark:bg-gradient-to-r dark:from-slate-900/90 dark:via-slate-900/80 dark:to-slate-950 border-slate-300 dark:border-slate-800/80 hover:border-amber-500 dark:hover:border-amber-500/40 shadow-[0_2px_8px_rgba(15,23,42,0.06)] dark:shadow-lg'
               }`}
             >
               {/* Top Row: Flag + Name + Badges + Room Code */}
@@ -649,34 +668,34 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                       <h3
                         className={`font-bold text-sm truncate transition-colors ${
                           room.isGoldName
-                            ? 'text-yellow-400 font-black drop-shadow-[0_1px_4px_rgba(234,179,8,0.7)] group-hover:text-yellow-300'
-                            : 'text-white group-hover:text-amber-300'
+                            ? 'text-amber-600 dark:text-yellow-400 font-black drop-shadow-[0_1px_1px_rgba(217,119,6,0.2)] dark:drop-shadow-[0_1px_4px_rgba(234,179,8,0.7)] group-hover:text-amber-700 dark:group-hover:text-yellow-300'
+                            : 'text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-300'
                         }`}
                       >
                         {room.name}
                       </h3>
                       {room.isGoldName && (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-gradient-to-r from-yellow-500/25 to-amber-500/25 text-yellow-300 border border-yellow-400/50 font-bold flex items-center gap-0.5 shadow-xs">
-                          <Sparkles size={9} className="text-yellow-400 animate-spin" />
+                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-100 dark:bg-transparent dark:bg-gradient-to-r dark:from-yellow-500/25 dark:to-amber-500/25 text-amber-800 dark:text-yellow-300 border border-amber-400 dark:border-yellow-400/50 font-bold flex items-center gap-0.5 shadow-xs">
+                          <Sparkles size={9} className="text-amber-600 dark:text-yellow-400 animate-spin" />
                           <span>اسم ذهبي</span>
                         </span>
                       )}
                       {expired ? (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-red-950/70 text-red-300 border border-red-500/40 font-mono">
+                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-red-50 dark:bg-red-950/70 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-500/40 font-mono">
                           ⛔ منتهي التفعيل (0 يوم)
                         </span>
                       ) : (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-950/60 text-emerald-300 border border-emerald-500/40 font-mono">
+                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 font-mono">
                           ⏳ {remainingDays} يوم
                         </span>
                       )}
                       {room.countryName && (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-amber-300/90 border border-slate-700">
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-amber-700 dark:text-amber-300/90 border border-slate-300 dark:border-slate-700">
                           {room.countryName}
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-400 truncate max-w-[240px] mt-0.5">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[240px] mt-0.5">
                       {room.description}
                     </p>
                   </div>
@@ -684,20 +703,20 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
 
                 <div className="flex items-center gap-1.5 shrink-0">
                   {room.isLocked ? (
-                    <span className="p-1 rounded-md bg-red-950/60 text-red-400 border border-red-500/30">
+                    <span className="p-1 rounded-md bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-500/30">
                       <Lock size={12} />
                     </span>
                   ) : null}
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-400 dark:border-amber-500/30 font-bold">
                     #{room.code}
                   </span>
                 </div>
               </div>
 
               {/* Bottom Row: Master (In RED Color), Mic status & Occupants */}
-              <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs">
+              <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800/60 text-xs">
                 {/* Master Info: COLOR MUST BE RED */}
-                <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[11px]">
                   <img
                     src={room.ownerAvatar}
                     alt={room.ownerName}
@@ -705,11 +724,11 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                     className="w-5 h-5 rounded-full object-cover border border-red-500 shadow-xs"
                   />
                   <span>👑 الماستر:</span>
-                  <span className="text-red-500 font-black tracking-wide drop-shadow-[0_1px_2px_rgba(239,68,68,0.3)]">
+                  <span className="text-red-600 dark:text-red-500 font-black tracking-wide drop-shadow-[0_1px_2px_rgba(239,68,68,0.2)]">
                     {room.ownerName}
                   </span>
                   {room.masterPinCode && (
-                    <span className="text-[9px] bg-red-950/60 text-red-300 border border-red-800/60 px-1 py-0.2 rounded font-mono">
+                    <span className="text-[9px] bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800/60 px-1 py-0.2 rounded font-mono">
                       PIN
                     </span>
                   )}
@@ -718,19 +737,19 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                 {/* Mic & Live Occupants */}
                 <div className="flex items-center gap-2">
                   {room.activeSpeakerId ? (
-                    <span className="flex items-center gap-1 text-[10px] text-amber-300 bg-amber-950/40 border border-amber-500/30 px-2 py-0.5 rounded-full animate-pulse">
-                      <Radio size={10} className="text-amber-400 animate-spin" />
+                    <span className="flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-400 dark:border-amber-500/30 px-2 py-0.5 rounded-full animate-pulse">
+                      <Radio size={10} className="text-amber-600 dark:text-amber-400 animate-spin" />
                       <span>المايك شغال</span>
                     </span>
                   ) : (
-                    <span className="text-[10px] text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] text-slate-600 dark:text-slate-500 bg-slate-100 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700/50 px-2 py-0.5 rounded-full">
                       المايك حر
                     </span>
                   )}
 
-                  <div className="flex items-center gap-1 text-[11px] text-slate-300 bg-slate-800/80 px-2.5 py-0.5 rounded-full border border-slate-700">
-                    <Users size={12} className="text-amber-400" />
-                    <span className="font-mono font-bold text-amber-300">
+                  <div className="flex items-center gap-1 text-[11px] text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-0.5 rounded-full border border-slate-300 dark:border-slate-700">
+                    <Users size={12} className="text-amber-600 dark:text-amber-400" />
+                    <span className="font-mono font-bold text-amber-700 dark:text-amber-300">
                       {room.occupantsCount}/{room.maxCapacity}
                     </span>
                   </div>
@@ -746,9 +765,9 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
           <button
             type="button"
             onClick={() => setShowPrivacyModal(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800/80 hover:border-amber-500/40 text-[11px] text-slate-400 hover:text-amber-300 transition-all"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900/70 dark:hover:bg-slate-900 border border-slate-300 dark:border-slate-800/80 hover:border-amber-500 dark:hover:border-amber-500/40 text-[11px] text-slate-600 dark:text-slate-400 hover:text-amber-700 dark:hover:text-amber-300 transition-all shadow-xs"
           >
-            <ShieldCheck size={13} className="text-amber-400/90" />
+            <ShieldCheck size={13} className="text-amber-600 dark:text-amber-400/90" />
             <span>الشروط وسياسة الخصوصية</span>
           </button>
         </div>
@@ -756,28 +775,28 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
 
       {/* 1. Owner Secret Passcode Gate Modal (ezez1976) */}
       {showOwnerAuthModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl w-full max-w-sm p-4 text-white shadow-2xl text-right">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3">
-              <div className="flex items-center gap-2 text-amber-400">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/55 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 border border-amber-400/60 dark:border-amber-500/40 rounded-3xl w-full max-w-sm p-4 text-slate-900 dark:text-white shadow-2xl text-right transition-colors duration-300">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5 mb-3">
+              <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
                 <KeyRound size={18} />
-                <h3 className="font-bold text-sm text-white">تحقق صلاحية مالك التطبيق</h3>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white">تحقق صلاحية مالك التطبيق</h3>
               </div>
               <button
                 onClick={() => setShowOwnerAuthModal(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-xs text-slate-300 mb-3 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 leading-relaxed">
               إنشاء وإدارة الغرف ميزة مقتصرة فقط على <strong>مالك التطبيق</strong>. يرجى إدخال الرمز السري للمالك للمتابعة:
             </p>
 
             <form onSubmit={handleVerifyOwnerPassword} className="space-y-3">
               <div>
-                <label className="block mb-1 text-[11px] text-amber-300 font-bold">
+                <label className="block mb-1 text-[11px] text-amber-700 dark:text-amber-300 font-bold">
                   رمز مالك التطبيق السري:
                 </label>
                 <input
@@ -790,13 +809,13 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                     setOwnerAuthError('');
                   }}
                   placeholder="أدخل الرمز السري هنا..."
-                  className="w-full bg-slate-950 border border-slate-700 focus:border-amber-400 rounded-xl px-3 py-2 text-sm text-center font-mono text-amber-300 outline-none tracking-widest"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-amber-500 dark:focus:border-amber-400 rounded-xl px-3 py-2 text-sm text-center font-mono text-amber-700 dark:text-amber-300 outline-none tracking-widest"
                 />
               </div>
 
               {ownerAuthError && (
-                <div className="p-2 bg-red-950/60 border border-red-500/50 rounded-xl text-red-300 text-xs flex items-center gap-1.5">
-                  <ShieldAlert size={14} className="shrink-0 text-red-400" />
+                <div className="p-2 bg-red-50 dark:bg-red-950/60 border border-red-300 dark:border-red-500/50 rounded-xl text-red-700 dark:text-red-300 text-xs flex items-center gap-1.5">
+                  <ShieldAlert size={14} className="shrink-0 text-red-600 dark:text-red-400" />
                   <span>{ownerAuthError}</span>
                 </div>
               )}
@@ -805,7 +824,7 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowOwnerAuthModal(false)}
-                  className="px-3 py-1.5 rounded-xl text-slate-400 hover:text-white text-xs"
+                  className="px-3 py-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-xs"
                 >
                   إلغاء
                 </button>
@@ -823,40 +842,41 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
 
       {/* 2. App Owner Management Panel Modal (Manage, Edit, Delete, and Create Rooms) */}
       {showOwnerPanelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl w-full max-w-lg p-4 text-white shadow-2xl text-right max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/60 dark:bg-black/85 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 border border-amber-400/60 dark:border-amber-500/40 rounded-3xl w-full max-w-lg p-4 text-slate-900 dark:text-white shadow-2xl text-right max-h-[92vh] flex flex-col transition-colors duration-300">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-3 shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-red-600 via-amber-500 to-yellow-500 flex items-center justify-center shadow-md">
-                  <Crown size={16} className="text-white" />
+            <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3 mb-3 shrink-0">
+              <div className="w-8 h-8 shrink-0" aria-hidden="true" />
+              <div className="flex-1 min-w-0 flex flex-col items-center justify-center text-center px-1">
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-red-600 via-amber-500 to-yellow-500 flex items-center justify-center shadow-md mb-1 shrink-0">
+                  <Crown size={18} className="text-white" />
                 </div>
-                <div>
-                  <h3 className="font-bold text-sm text-amber-300">
-                    لوحة تحكم مالك التطبيق
-                  </h3>
-                  <p className="text-[10px] text-slate-400">
-                    إدارة وتعديل وحذف الغرف وحصص الرتب وإنشاء الرومات الجديدة
-                  </p>
-                </div>
+                <h3 className="font-bold text-sm text-amber-700 dark:text-amber-300 truncate max-w-full">
+                  لوحة تحكم مالك التطبيق
+                </h3>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-full">
+                  إدارة وتعديل وحذف الغرف وحصص الرتب وإنشاء الرومات الجديدة
+                </p>
               </div>
               <button
+                type="button"
                 onClick={() => setShowOwnerPanelModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+                className="w-8 h-8 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0 self-start transition-colors"
+                title="إغلاق"
               >
                 ✕
               </button>
             </div>
 
             {/* Tabs Bar */}
-            <div className="flex items-center gap-2 mb-3 bg-slate-950 p-1 rounded-2xl border border-slate-800 shrink-0">
+            <div className="flex items-center gap-2 mb-3 bg-slate-100 dark:bg-slate-950 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 shrink-0 touch-scroll-x">
               <button
                 type="button"
                 onClick={() => setOwnerActiveTab('manage')}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                className={`flex-1 min-w-max shrink-0 whitespace-nowrap px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                   ownerActiveTab === 'manage'
                     ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Shield size={14} />
@@ -865,10 +885,10 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
               <button
                 type="button"
                 onClick={() => setOwnerActiveTab('create')}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                className={`flex-1 min-w-max shrink-0 whitespace-nowrap px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                   ownerActiveTab === 'create'
                     ? 'bg-gradient-to-r from-red-600 to-amber-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Plus size={14} />
@@ -881,18 +901,18 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
               <div className="flex-1 overflow-y-auto space-y-3 pr-0.5">
                 {/* Search in owner panel */}
                 <div className="relative flex items-center shrink-0">
-                  <Search size={14} className="absolute right-3 text-amber-400/70" />
+                  <Search size={14} className="absolute right-3 text-amber-600 dark:text-amber-400/70" />
                   <input
                     type="text"
                     value={ownerSearchQuery}
                     onChange={e => setOwnerSearchQuery(e.target.value)}
                     placeholder="ابحث بين غرف التطبيق لتعديلها أو حذفها..."
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl pr-8 pl-8 py-2 text-xs text-white placeholder:text-slate-500 outline-none"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-amber-500/60 rounded-xl pr-8 pl-8 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
                   />
                   {ownerSearchQuery && (
                     <button
                       onClick={() => setOwnerSearchQuery('')}
-                      className="absolute left-2.5 text-slate-400 hover:text-white"
+                      className="absolute left-2.5 text-slate-400 hover:text-slate-900 dark:hover:text-white"
                     >
                       <X size={12} />
                     </button>
@@ -902,8 +922,8 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                 {/* Rooms List */}
                 <div className="space-y-2.5">
                   {rooms.length === 0 ? (
-                    <div className="p-6 text-center bg-slate-950/70 border border-slate-800 rounded-2xl space-y-2.5">
-                      <p className="text-xs font-bold text-slate-300">
+                    <div className="p-6 text-center bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2.5">
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
                         لا توجد غرف مسجلة في قاعدة البيانات حتى الآن
                       </p>
                       <button
@@ -929,10 +949,10 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                     .map(room => (
                       <div
                         key={room.id}
-                        className={`p-3 rounded-2xl border transition-all ${
+                        className={`p-3 rounded-2xl border-[1.5px] dark:border transition-all ${
                           room.isGoldName
-                            ? 'bg-slate-950/90 border-yellow-500/50 shadow-md shadow-yellow-500/5'
-                            : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'
+                            ? 'bg-amber-50/80 dark:bg-slate-950/90 border-amber-500 dark:border-yellow-500/50 shadow-md shadow-yellow-500/5'
+                            : 'bg-white dark:bg-slate-950/70 border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 shadow-xs'
                         }`}
                       >
                         {/* Top row: Flag, Name, Badges */}
@@ -944,20 +964,20 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                                 <h4
                                   className={`text-xs font-black truncate ${
                                     room.isGoldName
-                                      ? 'text-yellow-400 drop-shadow-[0_1px_3px_rgba(234,179,8,0.6)]'
-                                      : 'text-white'
+                                      ? 'text-amber-700 dark:text-yellow-400 dark:drop-shadow-[0_1px_3px_rgba(234,179,8,0.6)]'
+                                      : 'text-slate-900 dark:text-white'
                                   }`}
                                 >
                                   {room.name}
                                 </h4>
                                 {room.isGoldName && (
-                                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 font-bold flex items-center gap-0.5">
+                                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-100 dark:bg-yellow-500/20 text-amber-800 dark:text-yellow-300 border border-amber-400 dark:border-yellow-500/40 font-bold flex items-center gap-0.5">
                                     <Sparkles size={8} />
                                     <span>ذهبي</span>
                                   </span>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
+                              <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                                 <span>{room.countryName}</span>
                                 <span>•</span>
                                 <span className="font-mono text-slate-500">ID: {room.id}</span>
@@ -970,39 +990,39 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                             <button
                               type="button"
                               onClick={() => handleStartEdit(room)}
-                              className="px-2.5 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold text-[11px] flex items-center gap-1 transition-all active:scale-95"
+                              className="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-600/20 dark:hover:bg-blue-600/30 border border-blue-300 dark:border-blue-500/40 text-blue-700 dark:text-blue-300 font-bold text-[11px] flex items-center gap-1 transition-all active:scale-95"
                               title="تعديل إعدادات الغرفة"
                             >
-                              <Edit3 size={12} className="text-blue-400" />
+                              <Edit3 size={12} className="text-blue-600 dark:text-blue-400" />
                               <span>تعديل</span>
                             </button>
                             <button
                               type="button"
                               onClick={() => setDeletingRoom(room)}
-                              className="px-2.5 py-1.5 rounded-xl bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 text-red-300 font-bold text-[11px] flex items-center gap-1 transition-all active:scale-95"
+                              className="px-2.5 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-600/20 dark:hover:bg-red-600/30 border border-red-300 dark:border-red-500/40 text-red-700 dark:text-red-300 font-bold text-[11px] flex items-center gap-1 transition-all active:scale-95"
                               title="حذف الغرفة نهائياً"
                             >
-                              <Trash2 size={12} className="text-red-400" />
+                              <Trash2 size={12} className="text-red-600 dark:text-red-400" />
                               <span>حذف</span>
                             </button>
                           </div>
                         </div>
 
                         {/* Middle row: Master Info in RED & Expiration / Capacity */}
-                        <div className="p-2 rounded-xl bg-slate-900/90 border border-slate-800/80 mb-2 space-y-1 text-[11px]">
+                        <div className="p-2 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800/80 mb-2 space-y-1 text-[11px]">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
-                              <Crown size={12} className="text-red-400 shrink-0" />
-                              <span className="text-slate-400">ماستر الروم:</span>
-                              <strong className="text-red-400 font-black">{room.ownerName}</strong>
+                              <Crown size={12} className="text-red-600 dark:text-red-400 shrink-0" />
+                              <span className="text-slate-500 dark:text-slate-400">ماستر الروم:</span>
+                              <strong className="text-red-600 dark:text-red-400 font-black">{room.ownerName}</strong>
                             </div>
-                            <span className="text-[10px] text-slate-400 font-mono">
-                              رمز الماستر: <strong className="text-amber-300">{room.masterPinCode || '1976'}</strong>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                              رمز الماستر: <strong className="text-amber-700 dark:text-amber-300">{room.masterPinCode || '1976'}</strong>
                             </span>
                           </div>
 
-                          <div className="flex items-center justify-between pt-1 border-t border-slate-800/60 text-[10px]">
-                            <div className={`flex items-center gap-1 font-medium ${isRoomExpired(room, nowMs) ? 'text-red-400' : 'text-emerald-400'}`}>
+                          <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800/60 text-[10px]">
+                            <div className={`flex items-center gap-1 font-medium ${isRoomExpired(room, nowMs) ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
                               <Calendar size={11} />
                               {isRoomExpired(room, nowMs) ? (
                                 <span>⛔ منتهي التفعيل (<strong>0 يوم</strong>)</span>
@@ -1010,7 +1030,7 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                                 <span>صلاحية الروم: <strong>{getRoomRemainingDays(room, nowMs)} يوم</strong></span>
                               )}
                             </div>
-                            <div className="flex items-center gap-1 text-amber-300 font-mono">
+                            <div className="flex items-center gap-1 text-amber-700 dark:text-amber-300 font-mono">
                               <Users size={11} />
                               <span>السعة: <strong>{room.occupantsCount || 0}/{room.maxCapacity || 100}</strong></span>
                             </div>
@@ -1020,16 +1040,16 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                         {/* Bottom row: Role Quotas limits badges */}
                         <div className="flex items-center gap-1 flex-wrap text-[9px]">
                           <span className="text-slate-500 ml-1">حصص الرتب:</span>
-                          <span className="px-1.5 py-0.5 rounded-md bg-pink-950/40 border border-pink-500/30 text-pink-300 font-bold">
+                          <span className="px-1.5 py-0.5 rounded-md bg-pink-50 dark:bg-pink-950/40 border border-pink-200 dark:border-pink-500/30 text-pink-700 dark:text-pink-300 font-bold">
                             مميز: {room.roleQuotas?.vip ?? 5}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded-md bg-yellow-950/40 border border-yellow-500/30 text-yellow-300 font-bold">
+                          <span className="px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-yellow-950/40 border border-amber-200 dark:border-yellow-500/30 text-amber-700 dark:text-yellow-300 font-bold">
                             مشرف: {room.roleQuotas?.admin ?? 10}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded-md bg-green-950/40 border border-green-500/30 text-green-300 font-bold">
+                          <span className="px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-green-950/40 border border-emerald-200 dark:border-green-500/30 text-emerald-700 dark:text-green-300 font-bold">
                             سوبر: {room.roleQuotas?.super_admin ?? 15}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded-md bg-blue-950/40 border border-blue-500/30 text-blue-300 font-bold">
+                          <span className="px-1.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 font-bold">
                             عضو: {room.roleQuotas?.member ?? 50}
                           </span>
                         </div>
@@ -1044,28 +1064,28 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
             {ownerActiveTab === 'create' && (
               <form onSubmit={handleCreateSubmit} className="flex-1 overflow-y-auto space-y-3.5 text-xs pr-0.5">
                 {/* 1. Room Name with Gold/Yellow Toggle Switch */}
-                <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-2.5">
+                <div className="p-3 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-slate-300 font-bold flex items-center gap-1.5">
+                    <label className="text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5">
                       <span>اسم الغرفة:</span>
-                      <span className="text-red-400 font-normal">* مطلوب</span>
+                      <span className="text-red-600 dark:text-red-400 font-normal">* مطلوب</span>
                     </label>
 
                     {/* Gold/Yellow Name Toggle Switch */}
                     <div className="flex items-center gap-2">
-                      <span className={`text-[11px] font-bold transition-colors ${newIsGoldName ? 'text-yellow-400' : 'text-slate-400'}`}>
+                      <span className={`text-[11px] font-bold transition-colors ${newIsGoldName ? 'text-amber-600 dark:text-yellow-400' : 'text-slate-500 dark:text-slate-400'}`}>
                         {newIsGoldName ? '✨ اسم ذهبي (مفعّل)' : 'اسم عادي'}
                       </span>
                       <button
                         type="button"
                         onClick={() => setNewIsGoldName(!newIsGoldName)}
                         className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ease-in-out ${
-                          newIsGoldName ? 'bg-gradient-to-r from-amber-500 to-yellow-400 justify-end shadow-md shadow-yellow-500/30' : 'bg-slate-800 justify-start'
+                          newIsGoldName ? 'bg-gradient-to-r from-amber-500 to-yellow-400 justify-end shadow-md shadow-yellow-500/30' : 'bg-slate-300 dark:bg-slate-800 justify-start'
                         }`}
                         title="تفعيل اللون الأصفر/الذهبي لاسم الروم في القائمة الرئيسية"
                       >
-                        <span className="w-4 h-4 rounded-full bg-slate-950 shadow-md transform transition-transform duration-200 flex items-center justify-center">
-                          {newIsGoldName ? <Sparkles size={10} className="text-yellow-400" /> : null}
+                        <span className="w-4 h-4 rounded-full bg-white dark:bg-slate-950 shadow-md transform transition-transform duration-200 flex items-center justify-center">
+                          {newIsGoldName ? <Sparkles size={10} className="text-amber-500 dark:text-yellow-400" /> : null}
                         </span>
                       </button>
                     </div>
@@ -1077,22 +1097,22 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                     value={newRoomName}
                     onChange={e => setNewRoomName(e.target.value)}
                     placeholder="مثال: مضايف بغداد وسهرات العراق الأصيلة 🇮🇶"
-                    className={`w-full bg-slate-900 border rounded-xl p-2.5 text-xs outline-none transition-all ${
+                    className={`w-full bg-white dark:bg-slate-900 border rounded-xl p-2.5 text-xs outline-none transition-all ${
                       newIsGoldName
-                        ? 'border-yellow-500/70 text-yellow-300 font-black drop-shadow-[0_1px_2px_rgba(234,179,8,0.5)] focus:border-yellow-400'
-                        : 'border-slate-800 text-white focus:border-amber-500'
+                        ? 'border-amber-400 dark:border-yellow-500/70 text-amber-700 dark:text-yellow-300 font-black focus:border-amber-500 dark:focus:border-yellow-400'
+                        : 'border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white focus:border-amber-500'
                     }`}
                   />
 
                   {/* Live Name Preview */}
-                  <div className="p-2 rounded-xl bg-slate-900/90 border border-slate-800/80 flex items-center justify-between text-[11px]">
-                    <span className="text-slate-400">معاينة اسم الروم في القائمة:</span>
+                  <div className="p-2 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-500 dark:text-slate-400">معاينة اسم الروم في القائمة:</span>
                     <div className="flex items-center gap-1.5">
-                      <span className={newIsGoldName ? 'text-yellow-400 font-black drop-shadow-[0_1px_3px_rgba(234,179,8,0.7)]' : 'text-white font-bold'}>
+                      <span className={newIsGoldName ? 'text-amber-600 dark:text-yellow-400 font-black' : 'text-slate-900 dark:text-white font-bold'}>
                         {newRoomName || 'اسم الغرفة...'}
                       </span>
                       {newIsGoldName && (
-                        <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 font-bold flex items-center gap-0.5">
+                        <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-100 dark:bg-yellow-500/20 text-amber-800 dark:text-yellow-300 border border-amber-300 dark:border-yellow-500/40 font-bold flex items-center gap-0.5">
                           <Sparkles size={9} />
                           <span>ذهبي</span>
                         </span>
@@ -1102,15 +1122,15 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                 </div>
 
                 {/* 2. Room Expiration in Days (1 to 365) */}
-                <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-2">
+                <div className="p-3 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-slate-300 font-bold flex items-center gap-1.5">
-                      <Calendar size={14} className="text-emerald-400" />
+                    <label className="text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5">
+                      <Calendar size={14} className="text-emerald-600 dark:text-emerald-400" />
                       <span>مدة صلاحية الروم (بالأيام - من 1 إلى 365):</span>
                     </label>
                     <div className="flex items-center gap-1 font-mono text-xs">
-                      <span className="text-emerald-400 font-bold text-sm">{newValidityDays}</span>
-                      <span className="text-slate-400">يوم</span>
+                      <span className="text-emerald-700 dark:text-emerald-400 font-bold text-sm">{newValidityDays}</span>
+                      <span className="text-slate-500 dark:text-slate-400">يوم</span>
                     </div>
                   </div>
 
@@ -1121,7 +1141,7 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                       max={365}
                       value={newValidityDays}
                       onChange={e => setNewValidityDays(Number(e.target.value))}
-                      className="flex-1 accent-emerald-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+                      className="flex-1 accent-emerald-500 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg"
                     />
                     <input
                       type="number"
@@ -1129,13 +1149,13 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                       max={365}
                       value={newValidityDays}
                       onChange={e => setNewValidityDays(Math.min(365, Math.max(1, Number(e.target.value) || 1)))}
-                      className="w-18 bg-slate-900 border border-slate-700 focus:border-emerald-400 rounded-xl py-1 px-2 text-center text-xs font-mono font-bold text-emerald-400 outline-none"
+                      className="w-18 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-emerald-500 dark:focus:border-emerald-400 rounded-xl py-1 px-2 text-center text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 outline-none"
                     />
                   </div>
 
                   {/* Quick Presets */}
-                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                    <span className="text-[10px] text-slate-500">مدة مقترحة:</span>
+                  <div className="flex items-center gap-1.5 touch-scroll-x py-0.5">
+                    <span className="text-[10px] text-slate-500 shrink-0 whitespace-nowrap">مدة مقترحة:</span>
                     {[
                       { days: 7, label: '7 أيام' },
                       { days: 30, label: '30 يوم' },
@@ -1147,31 +1167,31 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                         key={p.days}
                         type="button"
                         onClick={() => setNewValidityDays(p.days)}
-                        className={`px-2 py-0.5 rounded-lg border text-[10px] transition-all font-medium ${
+                        className={`px-2.5 py-1 rounded-lg border text-[10px] shrink-0 whitespace-nowrap transition-all font-medium ${
                           newValidityDays === p.days
-                            ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 font-bold shadow-xs'
-                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                            ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 font-bold shadow-xs'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
                         {p.label}
                       </button>
                     ))}
                   </div>
-                  <p className="text-[10px] text-slate-400 pt-0.5">
-                    تاريخ الانتهاء الفعلي: <strong className="text-emerald-300 font-mono">{new Date(nowMs + newValidityDays * DAY_IN_MS).toLocaleDateString('ar-SA')}</strong> (يتناقص يوماً كل 24 ساعة تلقائياً)
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 pt-0.5">
+                    تاريخ الانتهاء الفعلي: <strong className="text-emerald-700 dark:text-emerald-300 font-mono">{new Date(nowMs + newValidityDays * DAY_IN_MS).toLocaleDateString('ar-SA')}</strong> (يتناقص يوماً كل 24 ساعة تلقائياً)
                   </p>
                 </div>
 
                 {/* 3. Room Capacity (Concurrent users) */}
-                <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-2">
+                <div className="p-3 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-slate-300 font-bold flex items-center gap-1.5">
-                      <Users size={14} className="text-amber-400" />
+                    <label className="text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5">
+                      <Users size={14} className="text-amber-600 dark:text-amber-400" />
                       <span>السعة الاستيعابية للروم (الحد الأقصى للمتواجدين):</span>
                     </label>
                     <div className="flex items-center gap-1 font-mono text-xs">
-                      <span className="text-amber-400 font-bold text-sm">{newMaxCapacity}</span>
-                      <span className="text-slate-400">عضو</span>
+                      <span className="text-amber-700 dark:text-amber-400 font-bold text-sm">{newMaxCapacity}</span>
+                      <span className="text-slate-500 dark:text-slate-400">عضو</span>
                     </div>
                   </div>
 
@@ -1183,7 +1203,7 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                       step={10}
                       value={newMaxCapacity}
                       onChange={e => setNewMaxCapacity(Number(e.target.value))}
-                      className="flex-1 accent-amber-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+                      className="flex-1 accent-amber-500 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg"
                     />
                     <input
                       type="number"
@@ -1191,21 +1211,21 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                       max={1000}
                       value={newMaxCapacity}
                       onChange={e => setNewMaxCapacity(Math.min(1000, Math.max(5, Number(e.target.value) || 10)))}
-                      className="w-18 bg-slate-900 border border-slate-700 focus:border-amber-400 rounded-xl py-1 px-2 text-center text-xs font-mono font-bold text-amber-300 outline-none"
+                      className="w-18 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-amber-500 dark:focus:border-amber-400 rounded-xl py-1 px-2 text-center text-xs font-mono font-bold text-amber-700 dark:text-amber-300 outline-none"
                     />
                   </div>
 
-                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                    <span className="text-[10px] text-slate-500">سعة مقترحة:</span>
+                  <div className="flex items-center gap-1.5 touch-scroll-x py-0.5">
+                    <span className="text-[10px] text-slate-500 shrink-0 whitespace-nowrap">سعة مقترحة:</span>
                     {[50, 100, 200, 500, 1000].map(cap => (
                       <button
                         key={cap}
                         type="button"
                         onClick={() => setNewMaxCapacity(cap)}
-                        className={`px-2 py-0.5 rounded-lg border text-[10px] transition-all font-medium ${
+                        className={`px-2.5 py-1 rounded-lg border text-[10px] shrink-0 whitespace-nowrap transition-all font-medium ${
                           newMaxCapacity === cap
-                            ? 'bg-amber-500/20 border-amber-400 text-amber-300 font-bold shadow-xs'
-                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                            ? 'bg-amber-50 dark:bg-amber-500/20 border-amber-500 dark:border-amber-400 text-amber-700 dark:text-amber-300 font-bold shadow-xs'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
                         {cap} عضو
@@ -1215,24 +1235,24 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                 </div>
 
                 {/* 4. Roles Quotas Limits (كوتا وتعداد الرتب المسموح بها) */}
-                <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-2.5">
+                <div className="p-3 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-amber-400 font-bold">
+                    <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-bold">
                       <Shield size={15} />
                       <span>تحديد كوتا وتعداد الرتب (Roles Quotas Limits):</span>
                     </div>
-                    <span className="text-[10px] text-slate-400 font-normal">صلاحية المالك</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">صلاحية المالك</span>
                   </div>
-                  <p className="text-[10px] text-slate-400 leading-relaxed">
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
                     يحدد المالك العدد الأقصى المسموح به لكل رتبة، ولن يستطيع ماستر الروم تجاوز هذه الأعداد:
                   </p>
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {/* VIP Quota */}
-                    <div className="p-2 rounded-xl bg-pink-950/25 border border-pink-500/40 space-y-1">
+                    <div className="p-2 rounded-xl bg-pink-50 dark:bg-pink-950/25 border border-pink-200 dark:border-pink-500/40 space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-pink-400">مميز (V.I.P):</span>
-                        <span className="text-[9px] px-1 rounded bg-pink-900/60 text-pink-300">وردي</span>
+                        <span className="text-[11px] font-bold text-pink-700 dark:text-pink-400">مميز (V.I.P):</span>
+                        <span className="text-[9px] px-1 rounded bg-pink-100 dark:bg-pink-900/60 text-pink-700 dark:text-pink-300">وردي</span>
                       </div>
                       <input
                         type="number"
@@ -1240,15 +1260,15 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                         max={100}
                         value={newVipQuota}
                         onChange={e => setNewVipQuota(Math.max(0, Number(e.target.value) || 0))}
-                        className="w-full bg-slate-900 border border-pink-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-pink-300 outline-none text-xs"
+                        className="w-full bg-white dark:bg-slate-900 border border-pink-300 dark:border-pink-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-pink-700 dark:text-pink-300 outline-none text-xs"
                       />
                     </div>
 
                     {/* Admin Quota */}
-                    <div className="p-2 rounded-xl bg-yellow-950/25 border border-yellow-500/40 space-y-1">
+                    <div className="p-2 rounded-xl bg-amber-50 dark:bg-yellow-950/25 border border-amber-200 dark:border-yellow-500/40 space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-yellow-400">مشرف (Admin):</span>
-                        <span className="text-[9px] px-1 rounded bg-yellow-900/60 text-yellow-300">أصفر</span>
+                        <span className="text-[11px] font-bold text-amber-700 dark:text-yellow-400">مشرف (Admin):</span>
+                        <span className="text-[9px] px-1 rounded bg-amber-100 dark:bg-yellow-900/60 text-amber-700 dark:text-yellow-300">أصفر</span>
                       </div>
                       <input
                         type="number"
@@ -1256,15 +1276,15 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                         max={100}
                         value={newAdminQuota}
                         onChange={e => setNewAdminQuota(Math.max(0, Number(e.target.value) || 0))}
-                        className="w-full bg-slate-900 border border-yellow-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-yellow-300 outline-none text-xs"
+                        className="w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-yellow-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-amber-700 dark:text-yellow-300 outline-none text-xs"
                       />
                     </div>
 
                     {/* Super Admin Quota */}
-                    <div className="p-2 rounded-xl bg-green-950/25 border border-green-500/40 space-y-1">
+                    <div className="p-2 rounded-xl bg-emerald-50 dark:bg-green-950/25 border border-emerald-200 dark:border-green-500/40 space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-green-400">سوبر أدمن:</span>
-                        <span className="text-[9px] px-1 rounded bg-green-900/60 text-green-300">أخضر</span>
+                        <span className="text-[11px] font-bold text-emerald-700 dark:text-green-400">سوبر أدمن:</span>
+                        <span className="text-[9px] px-1 rounded bg-emerald-100 dark:bg-green-900/60 text-emerald-700 dark:text-green-300">أخضر</span>
                       </div>
                       <input
                         type="number"
@@ -1272,15 +1292,15 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                         max={150}
                         value={newSuperAdminQuota}
                         onChange={e => setNewSuperAdminQuota(Math.max(0, Number(e.target.value) || 0))}
-                        className="w-full bg-slate-900 border border-green-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-green-300 outline-none text-xs"
+                        className="w-full bg-white dark:bg-slate-900 border border-emerald-300 dark:border-green-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-emerald-700 dark:text-green-300 outline-none text-xs"
                       />
                     </div>
 
                     {/* Member Quota */}
-                    <div className="p-2 rounded-xl bg-blue-950/25 border border-blue-500/40 space-y-1">
+                    <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/25 border border-blue-200 dark:border-blue-500/40 space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-blue-400">عضو (Member):</span>
-                        <span className="text-[9px] px-1 rounded bg-blue-900/60 text-blue-300">أزرق</span>
+                        <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400">عضو (Member):</span>
+                        <span className="text-[9px] px-1 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">أزرق</span>
                       </div>
                       <input
                         type="number"
@@ -1288,7 +1308,7 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                         max={500}
                         value={newMemberQuota}
                         onChange={e => setNewMemberQuota(Math.max(0, Number(e.target.value) || 0))}
-                        className="w-full bg-slate-900 border border-blue-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-blue-300 outline-none text-xs"
+                        className="w-full bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-blue-700 dark:text-blue-300 outline-none text-xs"
                       />
                     </div>
                   </div>
@@ -1296,7 +1316,7 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
 
                 {/* Country Selection */}
                 <div>
-                  <label className="block mb-1 text-slate-300 font-bold">دولة وتصنيف الروم:</label>
+                  <label className="block mb-1 text-slate-700 dark:text-slate-300 font-bold">دولة وتصنيف الروم:</label>
                   <select
                     value={newRoomCategory}
                     onChange={e => {
@@ -1308,7 +1328,7 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                         setNewRoomFlag(found.flag);
                       }
                     }}
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl p-2 text-white outline-none"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 focus:border-amber-500 rounded-xl p-2 text-slate-900 dark:text-white outline-none"
                   >
                     {COUNTRIES_LIST.filter(c => c.id !== 'all').map(c => (
                       <option key={c.id} value={c.id}>
@@ -1319,14 +1339,14 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                 </div>
 
                 {/* Assigned Room Master Section (With RED Color Highlight) */}
-                <div className="p-3 bg-red-950/30 border border-red-500/40 rounded-2xl space-y-3">
-                  <div className="flex items-center gap-1.5 text-red-400 font-bold">
+                <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-500/40 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400 font-bold">
                     <Crown size={15} />
                     <span>تعيين ماستر الروم المسؤول (اسمه سيظهر باللون الأحمر دائماً):</span>
                   </div>
 
                   <div>
-                    <label className="block mb-1 text-slate-300">
+                    <label className="block mb-1 text-slate-700 dark:text-slate-300">
                       اسم ماستر الروم:
                     </label>
                     <input
@@ -1335,16 +1355,16 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                       value={newMasterName}
                       onChange={e => setNewMasterName(e.target.value)}
                       placeholder="مثال: صقر بغداد / كابتن أحمد"
-                      className="w-full bg-slate-950 border border-red-500/50 focus:border-red-400 rounded-xl p-2 text-red-400 font-black outline-none"
+                      className="w-full bg-white dark:bg-slate-950 border border-red-300 dark:border-red-500/50 focus:border-red-500 dark:focus:border-red-400 rounded-xl p-2 text-red-600 dark:text-red-400 font-black outline-none"
                     />
-                    <span className="text-[10px] text-red-400/90 block mt-1">
+                    <span className="text-[10px] text-red-600/90 dark:text-red-400/90 block mt-1">
                       * سيظهر اسم هذا الماستر باللون الأحمر في شريط الرومات والمايك والمحادثة.
                     </span>
                   </div>
 
                   {/* Master's 4-digit Secret Code */}
                   <div>
-                    <label className="block mb-1 text-slate-300">
+                    <label className="block mb-1 text-slate-700 dark:text-slate-300">
                       الرمز السري لماستر الروم (4 أرقام):
                     </label>
                     <input
@@ -1357,9 +1377,9 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                         setNewMasterPin(val);
                       }}
                       placeholder="مثال: 1976"
-                      className="w-full bg-slate-950 border border-red-500/50 focus:border-red-400 rounded-xl p-2 text-center text-sm font-mono tracking-widest text-amber-300 font-bold outline-none"
+                      className="w-full bg-white dark:bg-slate-950 border border-red-300 dark:border-red-500/50 focus:border-red-500 dark:focus:border-red-400 rounded-xl p-2 text-center text-sm font-mono tracking-widest text-amber-700 dark:text-amber-300 font-bold outline-none"
                     />
-                    <span className="text-[10px] text-slate-400 block mt-1">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-1">
                       * يستخدمه الماستر لإثبات هويته والتحكم بإدارة الروم.
                     </span>
                   </div>
@@ -1367,39 +1387,39 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
 
                 {/* Room Description */}
                 <div>
-                  <label className="block mb-1 text-slate-300 font-bold">وصف الروم:</label>
+                  <label className="block mb-1 text-slate-700 dark:text-slate-300 font-bold">وصف الروم:</label>
                   <input
                     type="text"
                     value={newRoomDesc}
                     onChange={e => setNewRoomDesc(e.target.value)}
                     placeholder="أهلاً بكم في دردشة اليالي الصوتية، حياكم الله جميعاً 🌹"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white outline-none"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white outline-none"
                   />
                 </div>
 
                 {/* Room Password for locking (Optional) */}
                 <div>
-                  <label className="block mb-1 text-slate-300 font-bold">كلمة سر قفل الروم للزوار (اختياري):</label>
+                  <label className="block mb-1 text-slate-700 dark:text-slate-300 font-bold">كلمة سر قفل الروم للزوار (اختياري):</label>
                   <input
                     type="password"
                     value={newRoomPassword}
                     onChange={e => setNewRoomPassword(e.target.value)}
                     placeholder="اتركه فارغاً ليكون الروم عاماً ومفتوحاً للجميع"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white outline-none"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white outline-none"
                   />
                 </div>
 
                 {formError && (
-                  <div className="p-2 bg-red-950/60 border border-red-500/50 rounded-xl text-red-300 text-xs">
+                  <div className="p-2 bg-red-50 dark:bg-red-950/60 border border-red-300 dark:border-red-500/50 rounded-xl text-red-700 dark:text-red-300 text-xs">
                     {formError}
                   </div>
                 )}
 
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                   <button
                     type="button"
                     onClick={() => setShowOwnerPanelModal(false)}
-                    className="px-3 py-1.5 rounded-xl text-slate-400 hover:text-white"
+                    className="px-3 py-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                   >
                     إلغاء
                   </button>
@@ -1420,21 +1440,21 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
 
       {/* 3. Edit Room Modal (Open when owner clicks "تعديل" on any room) */}
       {editingRoom && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/90 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-slate-900 border border-blue-500/40 rounded-3xl w-full max-w-md p-4 text-white shadow-2xl text-right max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-slate-900/65 dark:bg-black/90 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 border border-blue-400/60 dark:border-blue-500/40 rounded-3xl w-full max-w-md p-4 text-slate-900 dark:text-white shadow-2xl text-right max-h-[92vh] overflow-y-auto transition-colors duration-300">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5 mb-3">
               <div className="flex items-center gap-2">
-                <Edit3 size={18} className="text-blue-400" />
+                <Edit3 size={18} className="text-blue-600 dark:text-blue-400" />
                 <div>
-                  <h3 className="font-bold text-sm text-blue-300">
+                  <h3 className="font-bold text-sm text-blue-700 dark:text-blue-300">
                     تعديل إعدادات الغرفة: {editingRoom.name}
                   </h3>
-                  <span className="text-[10px] text-slate-400 font-mono">ID: {editingRoom.id}</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">ID: {editingRoom.id}</span>
                 </div>
               </div>
               <button
                 onClick={() => setEditingRoom(null)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               >
                 ✕
               </button>
@@ -1442,22 +1462,22 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
 
             <form onSubmit={handleSaveEdit} className="space-y-3.5 text-xs">
               {/* Room Name with Gold/Yellow Toggle */}
-              <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-2.5">
+              <div className="p-3 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-slate-300 font-bold">اسم الغرفة:</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-bold">اسم الغرفة:</label>
                   <div className="flex items-center gap-2">
-                    <span className={`text-[11px] font-bold ${editIsGoldName ? 'text-yellow-400' : 'text-slate-400'}`}>
+                    <span className={`text-[11px] font-bold ${editIsGoldName ? 'text-amber-600 dark:text-yellow-400' : 'text-slate-500 dark:text-slate-400'}`}>
                       {editIsGoldName ? '✨ اسم ذهبي (مفعّل)' : 'اسم عادي'}
                     </span>
                     <button
                       type="button"
                       onClick={() => setEditIsGoldName(!editIsGoldName)}
                       className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
-                        editIsGoldName ? 'bg-gradient-to-r from-amber-500 to-yellow-400 justify-end shadow-md' : 'bg-slate-800 justify-start'
+                        editIsGoldName ? 'bg-gradient-to-r from-amber-500 to-yellow-400 justify-end shadow-md' : 'bg-slate-300 dark:bg-slate-800 justify-start'
                       }`}
                     >
-                      <span className="w-4 h-4 rounded-full bg-slate-950 shadow-md flex items-center justify-center">
-                        {editIsGoldName ? <Sparkles size={10} className="text-yellow-400" /> : null}
+                      <span className="w-4 h-4 rounded-full bg-white dark:bg-slate-950 shadow-md flex items-center justify-center">
+                        {editIsGoldName ? <Sparkles size={10} className="text-amber-500 dark:text-yellow-400" /> : null}
                       </span>
                     </button>
                   </div>
@@ -1468,24 +1488,24 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                   required
                   value={editRoomName}
                   onChange={e => setEditRoomName(e.target.value)}
-                  className={`w-full bg-slate-900 border rounded-xl p-2.5 text-xs outline-none transition-all ${
+                  className={`w-full bg-white dark:bg-slate-900 border rounded-xl p-2.5 text-xs outline-none transition-all ${
                     editIsGoldName
-                      ? 'border-yellow-500/70 text-yellow-300 font-black'
-                      : 'border-slate-800 text-white focus:border-blue-500'
+                      ? 'border-amber-400 dark:border-yellow-500/70 text-amber-700 dark:text-yellow-300 font-black'
+                      : 'border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white focus:border-blue-500'
                   }`}
                 />
               </div>
 
               {/* Room Expiration (1 to 365 Days) */}
-              <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-2">
+              <div className="p-3 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-slate-300 font-bold flex items-center gap-1.5">
-                    <Calendar size={14} className="text-emerald-400" />
+                  <label className="text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5">
+                    <Calendar size={14} className="text-emerald-600 dark:text-emerald-400" />
                     <span>مدة صلاحية الروم (بالأيام):</span>
                   </label>
                   <div className="font-mono text-xs">
-                    <span className="text-emerald-400 font-bold text-sm">{editValidityDays}</span>
-                    <span className="text-slate-400 mr-1">يوم</span>
+                    <span className="text-emerald-700 dark:text-emerald-400 font-bold text-sm">{editValidityDays}</span>
+                    <span className="text-slate-500 dark:text-slate-400 mr-1">يوم</span>
                   </div>
                 </div>
 
@@ -1496,7 +1516,7 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                     max={365}
                     value={editValidityDays}
                     onChange={e => setEditValidityDays(Number(e.target.value))}
-                    className="flex-1 accent-emerald-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+                    className="flex-1 accent-emerald-500 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg"
                   />
                   <input
                     type="number"
@@ -1504,20 +1524,20 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                     max={365}
                     value={editValidityDays}
                     onChange={e => setEditValidityDays(Math.min(365, Math.max(1, Number(e.target.value) || 1)))}
-                    className="w-18 bg-slate-900 border border-slate-700 rounded-xl py-1 px-2 text-center text-xs font-mono font-bold text-emerald-400 outline-none"
+                    className="w-18 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl py-1 px-2 text-center text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 outline-none"
                   />
                 </div>
 
-                <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                <div className="flex items-center gap-1.5 touch-scroll-x py-0.5">
                   {[7, 30, 90, 180, 365].map(days => (
                     <button
                       key={days}
                       type="button"
                       onClick={() => setEditValidityDays(days)}
-                      className={`px-2 py-0.5 rounded-lg border text-[10px] ${
+                      className={`px-2.5 py-1 rounded-lg border text-[10px] shrink-0 whitespace-nowrap ${
                         editValidityDays === days
-                          ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 font-bold'
-                          : 'bg-slate-900 border-slate-800 text-slate-400'
+                          ? 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 font-bold'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
                       }`}
                     >
                       {days} يوم
@@ -1527,15 +1547,15 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
               </div>
 
               {/* Room Capacity */}
-              <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-2">
+              <div className="p-3 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-slate-300 font-bold flex items-center gap-1.5">
-                    <Users size={14} className="text-amber-400" />
+                  <label className="text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5">
+                    <Users size={14} className="text-amber-600 dark:text-amber-400" />
                     <span>السعة الاستيعابية للروم:</span>
                   </label>
                   <div className="font-mono text-xs">
-                    <span className="text-amber-400 font-bold text-sm">{editMaxCapacity}</span>
-                    <span className="text-slate-400 mr-1">عضو</span>
+                    <span className="text-amber-700 dark:text-amber-400 font-bold text-sm">{editMaxCapacity}</span>
+                    <span className="text-slate-500 dark:text-slate-400 mr-1">عضو</span>
                   </div>
                 </div>
 
@@ -1547,7 +1567,7 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                     step={10}
                     value={editMaxCapacity}
                     onChange={e => setEditMaxCapacity(Number(e.target.value))}
-                    className="flex-1 accent-amber-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+                    className="flex-1 accent-amber-500 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg"
                   />
                   <input
                     type="number"
@@ -1555,103 +1575,103 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                     max={1000}
                     value={editMaxCapacity}
                     onChange={e => setEditMaxCapacity(Math.min(1000, Math.max(5, Number(e.target.value) || 5)))}
-                    className="w-18 bg-slate-900 border border-slate-700 rounded-xl py-1 px-2 text-center text-xs font-mono font-bold text-amber-300 outline-none"
+                    className="w-18 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl py-1 px-2 text-center text-xs font-mono font-bold text-amber-700 dark:text-amber-300 outline-none"
                   />
                 </div>
               </div>
 
               {/* Roles Quotas Limits */}
-              <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-2.5">
+              <div className="p-3 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-blue-400 font-bold">
+                  <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-bold">
                     <Shield size={14} />
                     <span>تحديث كوتا وتعداد الرتب:</span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2 rounded-xl bg-pink-950/25 border border-pink-500/40 space-y-1">
-                    <span className="text-[11px] font-bold text-pink-400 block">مميز (V.I.P):</span>
+                  <div className="p-2 rounded-xl bg-pink-50 dark:bg-pink-950/25 border border-pink-200 dark:border-pink-500/40 space-y-1">
+                    <span className="text-[11px] font-bold text-pink-700 dark:text-pink-400 block">مميز (V.I.P):</span>
                     <input
                       type="number"
                       min={0}
                       max={100}
                       value={editVipQuota}
                       onChange={e => setEditVipQuota(Math.max(0, Number(e.target.value) || 0))}
-                      className="w-full bg-slate-900 border border-pink-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-pink-300 outline-none"
+                      className="w-full bg-white dark:bg-slate-900 border border-pink-300 dark:border-pink-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-pink-700 dark:text-pink-300 outline-none"
                     />
                   </div>
 
-                  <div className="p-2 rounded-xl bg-yellow-950/25 border border-yellow-500/40 space-y-1">
-                    <span className="text-[11px] font-bold text-yellow-400 block">مشرف (Admin):</span>
+                  <div className="p-2 rounded-xl bg-amber-50 dark:bg-yellow-950/25 border border-amber-200 dark:border-yellow-500/40 space-y-1">
+                    <span className="text-[11px] font-bold text-amber-700 dark:text-yellow-400 block">مشرف (Admin):</span>
                     <input
                       type="number"
                       min={0}
                       max={100}
                       value={editAdminQuota}
                       onChange={e => setEditAdminQuota(Math.max(0, Number(e.target.value) || 0))}
-                      className="w-full bg-slate-900 border border-yellow-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-yellow-300 outline-none"
+                      className="w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-yellow-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-amber-700 dark:text-yellow-300 outline-none"
                     />
                   </div>
 
-                  <div className="p-2 rounded-xl bg-green-950/25 border border-green-500/40 space-y-1">
-                    <span className="text-[11px] font-bold text-green-400 block">سوبر أدمن:</span>
+                  <div className="p-2 rounded-xl bg-emerald-50 dark:bg-green-950/25 border border-emerald-200 dark:border-green-500/40 space-y-1">
+                    <span className="text-[11px] font-bold text-emerald-700 dark:text-green-400 block">سوبر أدمن:</span>
                     <input
                       type="number"
                       min={0}
                       max={150}
                       value={editSuperAdminQuota}
                       onChange={e => setEditSuperAdminQuota(Math.max(0, Number(e.target.value) || 0))}
-                      className="w-full bg-slate-900 border border-green-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-green-300 outline-none"
+                      className="w-full bg-white dark:bg-slate-900 border border-emerald-300 dark:border-green-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-emerald-700 dark:text-green-300 outline-none"
                     />
                   </div>
 
-                  <div className="p-2 rounded-xl bg-blue-950/25 border border-blue-500/40 space-y-1">
-                    <span className="text-[11px] font-bold text-blue-400 block">عضو (Member):</span>
+                  <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/25 border border-blue-200 dark:border-blue-500/40 space-y-1">
+                    <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400 block">عضو (Member):</span>
                     <input
                       type="number"
                       min={0}
                       max={500}
                       value={editMemberQuota}
                       onChange={e => setEditMemberQuota(Math.max(0, Number(e.target.value) || 0))}
-                      className="w-full bg-slate-900 border border-blue-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-blue-300 outline-none"
+                      className="w-full bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-blue-700 dark:text-blue-300 outline-none"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Master Name & PIN */}
-              <div className="p-3 bg-red-950/30 border border-red-500/40 rounded-2xl space-y-2.5">
-                <div className="flex items-center gap-1.5 text-red-400 font-bold">
+              <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-500/40 rounded-2xl space-y-2.5">
+                <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400 font-bold">
                   <Crown size={14} />
                   <span>ماستر الروم والرمز السري (الاسم أحمر):</span>
                 </div>
                 <div>
-                  <label className="block mb-1 text-slate-300">اسم ماستر الروم:</label>
+                  <label className="block mb-1 text-slate-700 dark:text-slate-300">اسم ماستر الروم:</label>
                   <input
                     type="text"
                     required
                     value={editMasterName}
                     onChange={e => setEditMasterName(e.target.value)}
-                    className="w-full bg-slate-950 border border-red-500/50 rounded-xl p-2 text-red-400 font-black outline-none"
+                    className="w-full bg-white dark:bg-slate-950 border border-red-300 dark:border-red-500/50 rounded-xl p-2 text-red-600 dark:text-red-400 font-black outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block mb-1 text-slate-300">الرمز السري للماستر (4 أرقام):</label>
+                  <label className="block mb-1 text-slate-700 dark:text-slate-300">الرمز السري للماستر (4 أرقام):</label>
                   <input
                     type="text"
                     required
                     maxLength={4}
                     value={editMasterPin}
                     onChange={e => setEditMasterPin(e.target.value.replace(/\D/g, ''))}
-                    className="w-full bg-slate-950 border border-red-500/50 rounded-xl p-2 text-center text-sm font-mono tracking-widest text-amber-300 font-bold outline-none"
+                    className="w-full bg-white dark:bg-slate-950 border border-red-300 dark:border-red-500/50 rounded-xl p-2 text-center text-sm font-mono tracking-widest text-amber-700 dark:text-amber-300 font-bold outline-none"
                   />
                 </div>
               </div>
 
               {/* Country Selection */}
               <div>
-                <label className="block mb-1 text-slate-300 font-bold">الدولة والتصنيف:</label>
+                <label className="block mb-1 text-slate-700 dark:text-slate-300 font-bold">الدولة والتصنيف:</label>
                 <select
                   value={editCategory}
                   onChange={e => {
@@ -1663,7 +1683,7 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
                       setEditFlag(found.flag);
                     }
                   }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white outline-none"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white outline-none"
                 >
                   {COUNTRIES_LIST.filter(c => c.id !== 'all').map(c => (
                     <option key={c.id} value={c.id}>
@@ -1675,39 +1695,39 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
 
               {/* Description */}
               <div>
-                <label className="block mb-1 text-slate-300 font-bold">وصف الغرفة:</label>
+                <label className="block mb-1 text-slate-700 dark:text-slate-300 font-bold">وصف الغرفة:</label>
                 <input
                   type="text"
                   value={editRoomDesc}
                   onChange={e => setEditRoomDesc(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white outline-none"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white outline-none"
                 />
               </div>
 
               {/* Room Password */}
               <div>
-                <label className="block mb-1 text-slate-300 font-bold">كلمة سر القفل (اختياري):</label>
+                <label className="block mb-1 text-slate-700 dark:text-slate-300 font-bold">كلمة سر القفل (اختياري):</label>
                 <input
                   type="password"
                   value={editRoomPassword}
                   onChange={e => setEditRoomPassword(e.target.value)}
                   placeholder="فارغ = غرفة مفتوحة للجميع"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white outline-none"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2 text-slate-900 dark:text-white outline-none"
                 />
               </div>
 
               {editFormError && (
-                <div className="p-2 bg-red-950/60 border border-red-500/50 rounded-xl text-red-300 text-xs">
+                <div className="p-2 bg-red-50 dark:bg-red-950/60 border border-red-300 dark:border-red-500/50 rounded-xl text-red-700 dark:text-red-300 text-xs">
                   {editFormError}
                 </div>
               )}
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setEditingRoom(null)}
-                  className="px-3 py-1.5 rounded-xl text-slate-400 hover:text-white"
+                  className="px-3 py-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 >
                   إلغاء
                 </button>
@@ -1726,36 +1746,36 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
 
       {/* 4. Delete Room Confirmation Dialog */}
       {deletingRoom && (
-        <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-slate-900 border border-red-500/60 rounded-3xl w-full max-w-sm p-5 text-white shadow-2xl text-right space-y-4">
-            <div className="flex items-center gap-3 border-b border-red-900/40 pb-3">
-              <div className="w-10 h-10 rounded-2xl bg-red-600/20 border border-red-500/40 flex items-center justify-center shrink-0">
-                <AlertTriangle size={20} className="text-red-400 animate-pulse" />
+        <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/85 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 border border-red-400 dark:border-red-500/60 rounded-3xl w-full max-w-sm p-5 text-slate-900 dark:text-white shadow-2xl text-right space-y-4 transition-colors duration-300">
+            <div className="flex items-center gap-3 border-b border-red-200 dark:border-red-900/40 pb-3">
+              <div className="w-10 h-10 rounded-2xl bg-red-100 dark:bg-red-600/20 border border-red-300 dark:border-red-500/40 flex items-center justify-center shrink-0">
+                <AlertTriangle size={20} className="text-red-600 dark:text-red-400 animate-pulse" />
               </div>
               <div>
-                <h3 className="font-bold text-sm text-red-400">تأكيد حذف الغرفة</h3>
-                <span className="text-[10px] text-slate-400">إجراء لا يمكن التراجع عنه</span>
+                <h3 className="font-bold text-sm text-red-600 dark:text-red-400">تأكيد حذف الغرفة</h3>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400">إجراء لا يمكن التراجع عنه</span>
               </div>
             </div>
 
             {/* Prompt Explicit Text */}
-            <p className="text-sm font-bold text-white leading-relaxed">
+            <p className="text-sm font-bold text-slate-900 dark:text-white leading-relaxed">
               هل أنت متأكد من حذف هذه الغرفة نهائياً؟
             </p>
 
             {/* Room Preview Card */}
-            <div className="p-3 bg-slate-950/80 border border-red-500/30 rounded-2xl space-y-1.5 text-xs">
+            <div className="p-3 bg-slate-50 dark:bg-slate-950/80 border border-red-200 dark:border-red-500/30 rounded-2xl space-y-1.5 text-xs">
               <div className="flex items-center gap-2">
                 <span className="text-xl">{deletingRoom.flag}</span>
-                <span className="font-bold text-white truncate">{deletingRoom.name}</span>
+                <span className="font-bold text-slate-900 dark:text-white truncate">{deletingRoom.name}</span>
               </div>
-              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800">
-                <span>ماستر الروم: <strong className="text-red-400">{deletingRoom.ownerName}</strong></span>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200 dark:border-slate-800">
+                <span>ماستر الروم: <strong className="text-red-600 dark:text-red-400">{deletingRoom.ownerName}</strong></span>
                 <span className="font-mono text-slate-500">{deletingRoom.id}</span>
               </div>
             </div>
 
-            <p className="text-[11px] text-red-300/80 leading-relaxed">
+            <p className="text-[11px] text-red-600/90 dark:text-red-300/80 leading-relaxed">
               * سيتم مسح الغرفة وقواعد بياناتها بالكامل من التطبيق وتحديث القائمة الرئيسية فوراً.
             </p>
 
@@ -1764,14 +1784,14 @@ export const RoomListView: React.FC<RoomListViewProps> = ({
               <button
                 type="button"
                 onClick={() => setDeletingRoom(null)}
-                className="px-4 py-2 rounded-xl text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 text-xs font-medium transition-all"
+                className="px-4 py-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-medium transition-all"
               >
                 إلغاء التراجع
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDelete}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-lg shadow-red-900/40 active:scale-95 transition-all flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-lg shadow-red-900/20 dark:shadow-red-900/40 active:scale-95 transition-all flex items-center gap-1.5"
               >
                 <Trash2 size={14} />
                 <span>نعم، حذف نهائي</span>

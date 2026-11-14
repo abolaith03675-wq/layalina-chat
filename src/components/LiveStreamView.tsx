@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { LiveVideoStream, UserProfile, ROLE_HIERARCHY } from '../types/loqana';
 import { UserBadge } from './UserBadge';
+import { useTheme, getReadableRoleColor } from '../context/ThemeContext';
 
 interface LiveStreamViewProps {
   stream: LiveVideoStream;
@@ -46,6 +47,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
   onToggleCamera,
   onToggleMute,
 }) => {
+  const { isDarkMode } = useTheme();
   const isBroadcaster = stream.broadcasterId === currentUser.id;
   const isBlocked = stream.blockedUserIds.includes(currentUser.id);
 
@@ -408,11 +410,11 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 touch-scroll-x max-w-[60%] sm:max-w-none py-0.5">
             {isBroadcaster && (
               <button
                 onClick={() => setShowManageModal(true)}
-                className="px-2 py-1 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-300 font-bold text-[11px] flex items-center gap-1 active:scale-95 transition-all shadow-md"
+                className="px-2 py-1 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-300 font-bold text-[11px] flex items-center gap-1 shrink-0 whitespace-nowrap active:scale-95 transition-all shadow-md"
                 title="إدارة ومنع المشاهدين من البث المباشر"
               >
                 <Users size={13} className="text-amber-400" />
@@ -428,7 +430,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
             {isBroadcaster ? (
               <button
                 onClick={onEndStream}
-                className="px-2.5 py-1 rounded-full bg-red-600 hover:bg-red-500 text-white font-bold text-[11px] flex items-center gap-1 active:scale-95 transition-all shadow-md shadow-red-950"
+                className="px-2.5 py-1 rounded-full bg-red-600 hover:bg-red-500 text-white font-bold text-[11px] flex items-center gap-1 shrink-0 whitespace-nowrap active:scale-95 transition-all shadow-md shadow-red-950"
                 title="إنهاء البث المباشر"
               >
                 <X size={13} />
@@ -437,7 +439,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
             ) : (
               <button
                 onClick={() => setIsMinimized(!isMinimized)}
-                className="p-1.5 rounded-full bg-black/60 hover:bg-black/80 border border-white/10 text-slate-300 hover:text-white"
+                className="p-1.5 rounded-full bg-black/60 hover:bg-black/80 border border-white/10 text-slate-300 hover:text-white shrink-0"
                 title={isMinimized ? 'تكبير البث' : 'تصغير البث'}
               >
                 {isMinimized ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
@@ -476,10 +478,10 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
         {/* Bottom Broadcaster Controls (Camera / Mute / Test Camera) */}
         {isBroadcaster && !isMinimized && (
           <div className="absolute bottom-2 left-2 right-2 z-20 flex items-center justify-between text-white gap-2">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 touch-scroll-x max-w-[62%] sm:max-w-none py-0.5">
               <button
                 onClick={onToggleCamera}
-                className={`p-1.5 rounded-full border transition-all active:scale-95 ${
+                className={`p-1.5 rounded-full border shrink-0 transition-all active:scale-95 ${
                   stream.isCameraActive
                     ? 'bg-slate-800/80 border-slate-700 text-slate-200 hover:bg-slate-700'
                     : 'bg-red-600/30 border-red-500 text-red-300 hover:bg-red-600/40'
@@ -490,7 +492,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
               </button>
               <button
                 onClick={onToggleMute}
-                className={`p-1.5 rounded-full border transition-all active:scale-95 ${
+                className={`p-1.5 rounded-full border shrink-0 transition-all active:scale-95 ${
                   !stream.isMuted
                     ? 'bg-slate-800/80 border-slate-700 text-slate-200 hover:bg-slate-700'
                     : 'bg-red-600/30 border-red-500 text-red-300 hover:bg-red-600/40'
@@ -503,7 +505,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
                 type="button"
                 onClick={() => acquireHardwareCamera(true)}
                 disabled={isTestingCamera}
-                className="px-2.5 py-1 rounded-full bg-sky-600/85 hover:bg-sky-500 border border-sky-400/60 text-white font-bold text-[11px] flex items-center gap-1 active:scale-95 transition-all shadow-md disabled:opacity-60"
+                className="px-2.5 py-1 rounded-full bg-sky-600/85 hover:bg-sky-500 border border-sky-400/60 text-white font-bold text-[11px] flex items-center gap-1 shrink-0 whitespace-nowrap active:scale-95 transition-all shadow-md disabled:opacity-60"
                 title="التحقق من إذن الكاميرا وتجربة البث الحقيقي"
               >
                 {isTestingCamera ? (
@@ -530,36 +532,36 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
 
       {/* Broadcaster Viewer Management Modal */}
       {showManageModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 text-right">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-sm max-h-[85vh] flex flex-col text-white shadow-2xl overflow-hidden">
-            <div className="p-3.5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/55 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 text-right">
+          <div className="bg-white dark:bg-slate-900 border-[1.5px] dark:border border-slate-300 dark:border-slate-700 rounded-3xl w-full max-w-sm max-h-[85vh] flex flex-col text-slate-900 dark:text-white shadow-2xl overflow-hidden transition-colors duration-300">
+            <div className="p-3.5 bg-slate-50 dark:bg-transparent dark:bg-gradient-to-r dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
                   <Shield size={16} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-xs text-amber-300">
+                  <h3 className="font-bold text-xs text-amber-800 dark:text-amber-300">
                     نظام إدارة ومنع المشاهدين من البث
                   </h3>
-                  <span className="text-[10px] text-slate-400 block">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
                     يمكنك تحديد ومنع أي شخص في الروم من مشاهدة بثك
                   </span>
                 </div>
               </div>
               <button
                 onClick={() => setShowManageModal(false)}
-                className="p-1 rounded-full text-slate-400 hover:text-white"
+                className="p-1 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="p-3 bg-slate-950/60 border-b border-slate-800 space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-300">
+            <div className="p-3 bg-slate-50/70 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800 space-y-2">
+              <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
                 <span>
                   المتواجدون في الروم: <strong>{Math.max(0, roomUsers.length - 1)}</strong>
                 </span>
-                <span className="text-red-400 font-bold">
+                <span className="text-red-600 dark:text-red-400 font-bold">
                   الممنوعون من المشاهدة: {stream.blockedUserIds.length}
                 </span>
               </div>
@@ -571,7 +573,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="ابحث عن عضو بالاسم أو الرتبة..."
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl pr-8 pl-3 py-1.5 text-xs text-right text-white placeholder:text-slate-500 outline-none focus:border-amber-500/60"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl pr-8 pl-3 py-1.5 text-xs text-right text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-amber-500/60"
                 />
               </div>
             </div>
@@ -589,8 +591,8 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
                       key={user.id}
                       className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-2 ${
                         userIsBlocked
-                          ? 'bg-red-950/30 border-red-500/40 text-red-200'
-                          : 'bg-slate-800/60 border-slate-700/60 text-slate-200 hover:bg-slate-800'
+                          ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-500/40 text-red-800 dark:text-red-200'
+                          : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/60 text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
@@ -600,7 +602,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
                             alt={user.username}
                             referrerPolicy="no-referrer"
                             className="w-9 h-9 rounded-full object-cover border"
-                            style={{ borderColor: ROLE_HIERARCHY[user.role]?.hex || '#94a3b8' }}
+                            style={{ borderColor: getReadableRoleColor(user.role, isDarkMode) }}
                           />
                           <span className="absolute -bottom-1 -left-1 text-[10px]">{user.flag}</span>
                         </div>
@@ -608,13 +610,13 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span
                               className="text-xs font-black truncate max-w-[100px]"
-                              style={{ color: ROLE_HIERARCHY[user.role]?.hex || '#fff' }}
+                              style={{ color: getReadableRoleColor(user.role, isDarkMode) }}
                             >
                               {user.username}
                             </span>
                             <UserBadge role={user.role} size="sm" showLabel={false} />
                           </div>
-                          <span className="text-[10px] text-slate-400 block truncate">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate">
                             {userIsBlocked ? '🚫 ممنوع من المشاهدة' : '👁️ يشاهد البث حالياً'}
                           </span>
                         </div>
@@ -625,7 +627,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
                         className={`px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition-all active:scale-95 shrink-0 ${
                           userIsBlocked
                             ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
-                            : 'bg-red-600/80 hover:bg-red-600 text-white shadow-sm'
+                            : 'bg-red-600/90 hover:bg-red-600 text-white shadow-sm'
                         }`}
                       >
                         {userIsBlocked ? (
@@ -646,8 +648,8 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({
               )}
             </div>
 
-            <div className="p-3 bg-slate-950 border-t border-slate-800 flex items-center justify-between">
-              <span className="text-[10px] text-slate-400">
+            <div className="p-3 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">
                 يتم تطبيق حجب البث المباشر فوراً على شاشة العضو
               </span>
               <button

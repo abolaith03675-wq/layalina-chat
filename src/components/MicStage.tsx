@@ -1,23 +1,24 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Mic, MicOff, Clock, UserCheck, Flame, Volume2, Radio } from 'lucide-react';
-import { Room, SoundEffectItem, UserProfile, ROLE_HIERARCHY } from '../types/loqana';
+import { Mic, Clock, Flame, Volume2, Radio } from 'lucide-react';
+import { Room, SoundEffectItem, UserProfile } from '../types/loqana';
 import { soundEngine } from '../services/soundEngine';
 import { getMicDurationForRole } from '../services/firebaseService';
 import { UserBadge } from './UserBadge';
+import { useTheme, getReadableRoleColor } from '../context/ThemeContext';
 
 interface MicStageProps {
   room: Room;
   currentUser: UserProfile;
   speaker: UserProfile | null;
   queueUsers: UserProfile[];
-  onTakeMic: () => void;
   onReleaseMic: (reason?: 'manual' | 'timeout') => void;
-  onJoinQueue: () => void;
-  onLeaveQueue: () => void;
   onTriggerSound?: (soundType: SoundEffectItem['soundType'], name: string, icon: string) => void;
   onSelectUser?: (userId: string) => void;
   isMuted: boolean;
-  isMicTransitioning?: boolean;
+  audioPlaybackBlocked?: boolean;
+  onUnlockRemoteAudio?: () => void;
+  micError?: 'denied' | 'unavailable' | null;
+  onRetryMic?: () => void;
 }
 
 export const MicStage: React.FC<MicStageProps> = ({
@@ -25,17 +26,16 @@ export const MicStage: React.FC<MicStageProps> = ({
   currentUser,
   speaker,
   queueUsers,
-  onTakeMic,
   onReleaseMic,
-  onJoinQueue,
-  onLeaveQueue,
   onSelectUser,
   isMuted,
-  isMicTransitioning = false,
+  audioPlaybackBlocked = false,
+  onUnlockRemoteAudio,
+  micError = null,
+  onRetryMic,
 }) => {
+  const { isDarkMode } = useTheme();
   const isCurrentUserSpeaking = speaker?.id === currentUser.id;
-  const userQueueIndex = queueUsers.findIndex(u => u.id === currentUser.id);
-  const isInQueue = userQueueIndex !== -1;
 
   const speakerDurationSec = speaker
     ? getMicDurationForRole(room.micDurations, speaker.role)
@@ -130,17 +130,20 @@ export const MicStage: React.FC<MicStageProps> = ({
     isCurrentUserSpeaking,
   ]);
 
-  // Audio level animation (real mic when user speaks, or simulated dynamic voice bars when bots speak)
+  // Audio level animation (real local mic when speaking, real remote WebRTC stream when listening)
   const updateAudioLevels = useCallback(() => {
     if (isCurrentUserSpeaking) {
       const realLevel = soundEngine.getAudioLevel();
-      // Ensure smooth visual even if mic is quiet
-      const smoothed = Math.max(realLevel, Math.floor(Math.random() * 25) + 15);
+      const smoothed = Math.max(realLevel, Math.floor(Math.random() * 14) + 12);
       setAudioLevel(smoothed);
     } else if (speaker) {
-      // Dynamic simulated speech cadence
-      const pulse = Math.floor(Math.sin(Date.now() / 140) * 35 + 50 + Math.random() * 25);
-      setAudioLevel(Math.min(100, Math.max(10, pulse)));
+      const remoteLevel = soundEngine.getRemoteAudioLevel();
+      if (remoteLevel > 0) {
+        setAudioLevel(Math.min(100, Math.max(12, remoteLevel)));
+      } else {
+        const pulse = Math.floor(Math.sin(Date.now() / 160) * 18 + 28);
+        setAudioLevel(Math.min(100, Math.max(10, pulse)));
+      }
     } else {
       setAudioLevel(0);
     }
@@ -165,7 +168,7 @@ export const MicStage: React.FC<MicStageProps> = ({
   };
 
   return (
-    <div className="relative bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border-b border-amber-500/20 px-3 py-2 text-white overflow-hidden shadow-inner select-none">
+    <div className="relative bg-slate-100 dark:bg-transparent dark:bg-gradient-to-b dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 border-b border-slate-300 dark:border-amber-500/20 px-3 py-2 text-slate-900 dark:text-white overflow-hidden shadow-inner select-none transition-colors duration-300">
       {/* Background ambient lighting */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.07)_0%,transparent_70%)] pointer-events-none" />
 
@@ -185,7 +188,7 @@ export const MicStage: React.FC<MicStageProps> = ({
       {/* Speaker Stage Card */}
       <div className="relative z-10 flex flex-col items-center">
         {speaker ? (
-          <div className="w-full flex items-center justify-between bg-slate-900/90 border border-amber-500/30 rounded-2xl p-2.5 shadow-xl relative overflow-hidden backdrop-blur-md">
+          <div className="w-full flex items-center justify-between bg-white dark:bg-slate-900/90 border-[1.5px] dark:border border-amber-500 dark:border-amber-500/30 rounded-2xl p-2.5 shadow-md dark:shadow-xl relative overflow-hidden backdrop-blur-md transition-colors duration-300">
             {/* Visualizer backdrop highlight */}
             <div
               className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-transparent transition-opacity duration-300"
@@ -202,7 +205,7 @@ export const MicStage: React.FC<MicStageProps> = ({
                 <div
                   className="w-13 h-13 rounded-full overflow-hidden p-0.5 border-2 transition-all duration-150 relative z-10"
                   style={{
-                    borderColor: audioLevel > 25 ? '#f59e0b' : '#64748b',
+                    borderColor: audioLevel > 25 ? '#f59e0b' : isDarkMode ? '#64748b' : '#cbd5e1',
                     boxShadow: audioLevel > 20 ? `0 0 ${audioLevel / 4}px rgba(245, 158, 11, 0.8)` : 'none',
                     transform: `scale(${1 + (audioLevel / 500)})`,
                   }}
@@ -215,7 +218,7 @@ export const MicStage: React.FC<MicStageProps> = ({
                   />
                 </div>
                 {/* Speaking indicator dot */}
-                <div className="absolute -bottom-1 -right-1 bg-amber-500 text-slate-950 p-1 rounded-full border-2 border-slate-950 shadow-md">
+                <div className="absolute -bottom-1 -right-1 bg-amber-500 text-slate-950 p-1 rounded-full border-2 border-white dark:border-slate-950 shadow-md">
                   <Radio size={11} className="animate-spin" />
                 </div>
               </div>
@@ -227,7 +230,7 @@ export const MicStage: React.FC<MicStageProps> = ({
                   <button
                     onClick={() => onSelectUser?.(speaker.id)}
                     className="text-sm font-black hover:underline cursor-pointer truncate max-w-[130px] sm:max-w-[180px]"
-                    style={{ color: ROLE_HIERARCHY[speaker.role]?.hex || '#ef4444' }}
+                    style={{ color: getReadableRoleColor(speaker.role, isDarkMode) }}
                     title="خيارات المستخدم"
                   >
                     {speaker.username}
@@ -235,13 +238,13 @@ export const MicStage: React.FC<MicStageProps> = ({
                   <UserBadge role={speaker.role} size="sm" />
                 </div>
 
-                <div className="flex items-center gap-2 text-[11px] text-amber-300/90 mt-0.5 flex-wrap">
+                <div className="flex items-center gap-2 text-[11px] text-amber-700 dark:text-amber-300/90 mt-0.5 flex-wrap">
                   <span
                     className={`flex items-center gap-1 ${
                       room.isMicTimerPaused
-                        ? 'text-emerald-300 font-bold'
+                        ? 'text-emerald-700 dark:text-emerald-300 font-bold'
                         : micSecondsRemaining <= 10
-                        ? 'text-red-400 font-bold animate-pulse'
+                        ? 'text-red-600 dark:text-red-400 font-bold animate-pulse'
                         : ''
                     }`}
                   >
@@ -249,12 +252,12 @@ export const MicStage: React.FC<MicStageProps> = ({
                     <span className="font-mono">{formatTime(micSecondsRemaining)}</span>
                   </span>
                   {room.isMicTimerPaused && (
-                    <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold text-[10px]">
+                    <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 font-bold text-[10px]">
                       📌 مثبّت
                     </span>
                   )}
                   <span className="text-slate-400">•</span>
-                  <span className="flex items-center gap-1 text-emerald-400">
+                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
                     <Flame size={11} />
                     <span>على المايك</span>
                   </span>
@@ -282,100 +285,71 @@ export const MicStage: React.FC<MicStageProps> = ({
           </div>
         ) : (
           /* Mic is empty state */
-          <div className="w-full flex items-center justify-between bg-slate-900/60 border border-slate-800 rounded-2xl p-2.5 text-slate-300">
+          <div className="w-full flex items-center justify-between bg-white dark:bg-slate-900/60 border-[1.5px] dark:border border-slate-300 dark:border-slate-800 rounded-2xl p-2.5 text-slate-700 dark:text-slate-300 shadow-xs transition-colors duration-300">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400">
+              <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-slate-800 border border-amber-200 dark:border-slate-700 flex items-center justify-center text-amber-600 dark:text-amber-400">
                 <Mic size={18} />
               </div>
               <div>
-                <p className="text-xs font-bold text-white">المايك متاح حالياً 🎙️</p>
-                <p className="text-[11px] text-slate-400">لا يوجد متحدث على المايك، تفضل بالصعود</p>
+                <p className="text-xs font-bold text-slate-900 dark:text-white">المايك متاح حالياً 🎙️</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">لا يوجد متحدث — اضغط زر المايك بالأسفل للصعود</p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Mic Control Main Button */}
-        <div className="w-full mt-2 flex items-center gap-2">
-          {currentUser.isMuted ? (
-            <div className="flex-1 py-2 px-3 rounded-xl bg-red-950/80 border border-red-500/50 text-red-300 font-bold text-xs text-center flex items-center justify-center gap-1.5">
-              <MicOff size={15} />
-              <span>أنت مكتوم حالياً في هذه الغرفة ولا يمكنك التحدث بالمايك</span>
-            </div>
-          ) : isCurrentUserSpeaking ? (
-            <button
-              key="btn-release-mic"
-              type="button"
-              disabled={isMicTransitioning}
-              onClick={() => onReleaseMic('manual')}
-              className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-red-900/40 active:scale-98 transition-all border border-red-400/40 disabled:opacity-70"
-            >
-              <MicOff size={15} />
-              <span>أنت على المايك (اضغط لتسليم المايك)</span>
-            </button>
-          ) : isInQueue ? (
-            <button
-              key="btn-leave-queue"
-              type="button"
-              onClick={onLeaveQueue}
-              className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-98 transition-all border border-yellow-300"
-            >
-              <UserCheck size={15} />
-              <span>أنت في السرا (دورك: #{userQueueIndex + 1}) - إلغاء الطلب</span>
-            </button>
-          ) : room.isMicLocked && currentUser.role !== 'owner' && currentUser.role !== 'vip' && currentUser.role !== 'admin' && currentUser.role !== 'super_admin' ? (
-            <div className="flex-1 py-2 px-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 font-bold text-xs text-center flex items-center justify-center gap-1.5">
-              <span>🔒 المايك مقفل حالياً ومخصص للإدارة فقط</span>
-            </div>
-          ) : !speaker ? (
-            <button
-              key="btn-take-mic"
-              type="button"
-              disabled={isMicTransitioning}
-              onClick={onTakeMic}
-              className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/25 active:scale-98 transition-all border border-amber-300 glow-gold disabled:opacity-70"
-            >
-              <Mic size={16} className="text-slate-950 animate-pulse" />
-              <span>أخذ المايك المباشر 🎙️</span>
-            </button>
-          ) : (
-            <button
-              key="btn-join-queue"
-              type="button"
-              onClick={onJoinQueue}
-              className="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-amber-500/30 active:scale-98 transition-all"
-            >
-              <Mic size={15} />
-              <span>طلب المايك (حجز دور في السرا)</span>
-            </button>
-          )}
-        </div>
+        {/* Audio autoplay unlock / Mic retry inline action */}
+        {audioPlaybackBlocked && speaker && !isCurrentUserSpeaking && !isMuted && onUnlockRemoteAudio && (
+          <button
+            type="button"
+            onClick={onUnlockRemoteAudio}
+            className="w-full mt-2 py-1.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-98 transition-all animate-pulse"
+          >
+            <Volume2 size={15} />
+            <span>اضغط هنا لتفعيل سماع صوت المتحدث المباشر</span>
+          </button>
+        )}
+
+        {isCurrentUserSpeaking && micError && onRetryMic && (
+          <button
+            type="button"
+            onClick={onRetryMic}
+            className="w-full mt-2 py-1.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-98 transition-all"
+          >
+            <Mic size={15} />
+            <span>
+              {micError === 'denied'
+                ? 'تم رفض إذن المايك — اسمح بالميكروفون واضغط لإعادة التفعيل'
+                : 'اضغط هنا لتشغيل الميكروفون وإرسال صوتك للغرفة'}
+            </span>
+          </button>
+        )}
 
         {/* Mic Queue Bar (سرا المايك) */}
         {queueUsers.length > 0 && (
-          <div className="w-full mt-2 flex items-center gap-1.5 bg-slate-950/70 border border-slate-800/80 rounded-xl px-2 py-1 overflow-x-auto text-xs scrollbar-none">
-            <span className="text-[10px] text-amber-400 font-bold shrink-0 flex items-center gap-1">
+          <div className="w-full mt-2 flex items-center gap-1.5 bg-white/90 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 rounded-xl px-2 py-1.5 text-xs">
+            <span className="text-[10px] text-amber-700 dark:text-amber-400 font-bold shrink-0 whitespace-nowrap flex items-center gap-1">
               <span>سرا المايك:</span>
-              <span className="px-1 py-0.2 bg-amber-500/20 rounded text-[9px] font-mono">
+              <span className="px-1 py-0.2 bg-amber-100 dark:bg-amber-500/20 rounded text-[9px] font-mono">
                 {queueUsers.length}
               </span>
             </span>
-            <div className="flex items-center gap-1.5 overflow-x-auto">
+            <div className="flex items-center gap-1.5 flex-1 min-w-0 touch-scroll-x">
               {queueUsers.map((u, idx) => (
                 <div
                   key={u.id}
-                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg border text-[11px] shrink-0 ${
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] shrink-0 whitespace-nowrap ${
                     u.id === currentUser.id
-                      ? 'bg-amber-500/20 border-amber-400/50 text-amber-300 font-bold'
-                      : 'bg-slate-900 border-slate-800 text-slate-300'
+                      ? 'bg-amber-100 dark:bg-amber-500/20 border-amber-400/70 dark:border-amber-400/50 text-amber-900 dark:text-amber-300 font-bold'
+                      : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
                   }`}
                 >
-                  <span className="text-[9px] text-amber-400 font-mono font-bold">#{idx + 1}</span>
+                  <span className="text-[9px] text-amber-600 dark:text-amber-400 font-mono font-bold">#{idx + 1}</span>
                   <img
                     src={u.avatar}
                     alt={u.username}
                     referrerPolicy="no-referrer"
-                    className="w-4 h-4 rounded-full object-cover"
+                    className="w-4 h-4 rounded-full object-cover shrink-0"
                   />
                   <span className="truncate max-w-[70px]">{u.username}</span>
                 </div>

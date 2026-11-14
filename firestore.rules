@@ -134,6 +134,69 @@ service cloud.firestore {
       s.isMuted is bool;
     }
 
+    function isValidKickEvent(k) {
+      return k is map &&
+      k.keys().hasAll(['targetUid', 'targetName', 'kickedBy', 'kickedAtMs']) &&
+      k.keys().hasOnly(['targetUid', 'targetName', 'kickedBy', 'kickedAtMs']) &&
+      isValidId(k.targetUid) &&
+      k.targetName is string && k.targetName.size() >= 1 && k.targetName.size() <= 50 &&
+      k.kickedBy is string && k.kickedBy.size() >= 1 && k.kickedBy.size() <= 50 &&
+      k.kickedAtMs is number && k.kickedAtMs >= 0;
+    }
+
+    function isValidBroadcastGiftData(g) {
+      return g is map &&
+      g.keys().hasAll(['giftId', 'giftName', 'icon', 'value', 'senderName', 'recipientName']) &&
+      g.keys().hasOnly(['giftId', 'giftName', 'icon', 'value', 'senderName', 'recipientName']) &&
+      g.giftId is string && g.giftId.size() <= 40 &&
+      g.giftName is string && g.giftName.size() <= 60 &&
+      g.icon is string && g.icon.size() <= 16 &&
+      g.value is number && g.value >= 0 &&
+      g.senderName is string && g.senderName.size() >= 1 && g.senderName.size() <= 50 &&
+      g.recipientName is string && g.recipientName.size() >= 1 && g.recipientName.size() <= 50;
+    }
+
+    function isValidBroadcastEvent(ev) {
+      return ev is map &&
+      ev.keys().hasAll(['id', 'category', 'title', 'message', 'actorName', 'createdAtMs']) &&
+      ev.keys().hasOnly(['id', 'category', 'title', 'message', 'actorName', 'targetName', 'giftData', 'createdAtMs']) &&
+      isValidId(ev.id) &&
+      ev.category in [
+        'enter', 'leave', 'bind', 'unbind', 'gift',
+        'ban', 'ban_ip', 'ban_device', 'ban_both', 'unban',
+        'kick', 'mute', 'unmute', 'admin'
+      ] &&
+      ev.title is string && ev.title.size() >= 1 && ev.title.size() <= 80 &&
+      ev.message is string && ev.message.size() >= 1 && ev.message.size() <= 400 &&
+      ev.actorName is string && ev.actorName.size() >= 1 && ev.actorName.size() <= 50 &&
+      (!('targetName' in ev) || ev.targetName == null || (ev.targetName is string && ev.targetName.size() <= 50)) &&
+      (!('giftData' in ev) || ev.giftData == null || isValidBroadcastGiftData(ev.giftData)) &&
+      ev.createdAtMs is number && ev.createdAtMs >= 0;
+    }
+
+    function isValidRoomBroadcastDoc(data) {
+      return data.keys().hasAll([
+        'id', 'roomId', 'category', 'title', 'message', 'actorName', 'createdAtMs', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'roomId', 'category', 'title', 'message', 'actorName', 'targetName', 'giftData', 'createdAtMs', 'createdAt'
+      ]) &&
+      isValidId(data.id) &&
+      isValidId(data.roomId) &&
+      data.category in [
+        'enter', 'leave', 'bind', 'unbind', 'gift',
+        'ban', 'ban_ip', 'ban_device', 'ban_both', 'unban',
+        'kick', 'mute', 'unmute', 'admin'
+      ] &&
+      data.title is string && data.title.size() >= 1 && data.title.size() <= 80 &&
+      data.message is string && data.message.size() >= 1 && data.message.size() <= 400 &&
+      data.actorName is string && data.actorName.size() >= 1 && data.actorName.size() <= 50 &&
+      (!('targetName' in data) || data.targetName == null || (data.targetName is string && data.targetName.size() <= 50)) &&
+      (!('giftData' in data) || data.giftData == null || isValidBroadcastGiftData(data.giftData)) &&
+      data.createdAtMs is number && data.createdAtMs >= 0 &&
+      data.createdAt is timestamp;
+    }
+
     function isValidRoomCore(data) {
       return data.keys().hasAll([
         'id', 'code', 'name', 'category', 'countryName', 'flag', 'description',
@@ -148,7 +211,8 @@ service cloud.firestore {
         'isLocked', 'password', 'welcomeMessage', 'activeSpeakerId', 'speakerStartedAtMs',
         'isMicTimerPaused', 'micPausedRemainingSec', 'micQueue', 'bannerUrl', 'isGoldName',
         'validityDays', 'expiresAt', 'expiresAtMs', 'isActive', 'roleQuotas', 'micDurations',
-        'mutedUserIds', 'isMicLocked', 'activeVideoStream', 'isPublic', 'createdAt', 'updatedAt'
+        'mutedUserIds', 'isMicLocked', 'reportsAllowedUsers', 'reportsAllowedRoles',
+        'activeVideoStream', 'micSessionId', 'lastKickEvent', 'lastBroadcastEvent', 'isPublic', 'createdAt', 'updatedAt'
       ]) &&
       isValidId(data.id) &&
       isValidId(data.ownerUid) &&
@@ -190,7 +254,12 @@ service cloud.firestore {
       (!('roleQuotas' in data) || isValidRoleQuotas(data.roleQuotas)) &&
       (!('micDurations' in data) || isValidMicDurations(data.micDurations)) &&
       (!('mutedUserIds' in data) || data.mutedUserIds == null || (data.mutedUserIds is list && data.mutedUserIds.size() <= 500)) &&
-      (!('activeVideoStream' in data) || data.activeVideoStream == null || isValidLiveStream(data.activeVideoStream));
+      (!('reportsAllowedUsers' in data) || data.reportsAllowedUsers == null || (data.reportsAllowedUsers is list && data.reportsAllowedUsers.size() <= 100 && (data.reportsAllowedUsers.size() == 0 || data.reportsAllowedUsers[0] is string))) &&
+      (!('reportsAllowedRoles' in data) || data.reportsAllowedRoles == null || (data.reportsAllowedRoles is list && data.reportsAllowedRoles.size() <= 6 && (data.reportsAllowedRoles.size() == 0 || isValidRole(data.reportsAllowedRoles[0])))) &&
+      (!('activeVideoStream' in data) || data.activeVideoStream == null || isValidLiveStream(data.activeVideoStream)) &&
+      (!('micSessionId' in data) || data.micSessionId == null || (data.micSessionId is string && data.micSessionId.size() <= 128)) &&
+      (!('lastKickEvent' in data) || data.lastKickEvent == null || isValidKickEvent(data.lastKickEvent)) &&
+      (!('lastBroadcastEvent' in data) || data.lastBroadcastEvent == null || isValidBroadcastEvent(data.lastBroadcastEvent));
     }
 
     function isValidRoom(data) {
@@ -206,7 +275,8 @@ service cloud.firestore {
       data.keys().hasOnly([
         'id', 'roomId', 'username', 'avatar', 'role', 'countryCode', 'flag',
         'level', 'coins', 'giftsReceivedCount', 'textColor', 'mood',
-        'isMuted', 'isBound', 'isPrivateChatLocked', 'joinedAt', 'lastSeenAt'
+        'isMuted', 'isBound', 'isPrivateChatLocked', 'ipAddress', 'deviceId',
+        'joinedAt', 'lastSeenAt'
       ]) &&
       isValidId(data.id) &&
       isValidId(data.roomId) &&
@@ -223,6 +293,8 @@ service cloud.firestore {
       data.isMuted is bool &&
       data.isBound is bool &&
       data.isPrivateChatLocked is bool &&
+      (!('ipAddress' in data) || data.ipAddress == null || (data.ipAddress is string && data.ipAddress.size() <= 64)) &&
+      (!('deviceId' in data) || data.deviceId == null || (data.deviceId is string && data.deviceId.size() <= 64)) &&
       data.joinedAt is timestamp &&
       data.lastSeenAt is timestamp;
     }
@@ -251,7 +323,7 @@ service cloud.firestore {
         'id', 'roomId', 'ip', 'username', 'bannedAt', 'bannedBy', 'bannedByUid', 'createdAt'
       ]) &&
       data.keys().hasOnly([
-        'id', 'roomId', 'ip', 'deviceId', 'username', 'targetUid', 'bannedAt', 'bannedBy', 'bannedByUid', 'createdAt'
+        'id', 'roomId', 'ip', 'deviceId', 'username', 'targetUid', 'banType', 'reason', 'bannedAt', 'bannedBy', 'bannedByUid', 'createdAt'
       ]) &&
       isValidId(data.id) &&
       isValidId(data.roomId) &&
@@ -259,6 +331,8 @@ service cloud.firestore {
       (!('deviceId' in data) || (data.deviceId is string && data.deviceId.size() <= 64)) &&
       data.username is string && data.username.size() >= 1 && data.username.size() <= 40 &&
       (!('targetUid' in data) || (data.targetUid is string && data.targetUid.size() <= 128)) &&
+      (!('banType' in data) || data.banType == null || data.banType in ['ip', 'device', 'both']) &&
+      (!('reason' in data) || data.reason == null || (data.reason is string && data.reason.size() <= 200)) &&
       data.bannedAt is string && data.bannedAt.size() <= 40 &&
       data.bannedBy is string && data.bannedBy.size() <= 40 &&
       isValidId(data.bannedByUid) &&
@@ -324,6 +398,78 @@ service cloud.firestore {
       data.reason is string && data.reason.size() >= 1 && data.reason.size() <= 120 &&
       (!('details' in data) || data.details == null || (data.details is string && data.details.size() <= 500)) &&
       data.createdAt is timestamp;
+    }
+
+    function isValidRoomLog(data) {
+      return data.keys().hasAll([
+        'id', 'roomId', 'userId', 'username', 'userRole', 'userFlag',
+        'action', 'timestamp', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'roomId', 'userId', 'username', 'userRole', 'userFlag',
+        'userAvatar', 'action', 'details', 'ipAddress', 'deviceId',
+        'timestamp', 'createdAt'
+      ]) &&
+      isValidId(data.id) &&
+      isValidId(data.roomId) &&
+      isValidId(data.userId) &&
+      data.username is string && data.username.size() >= 1 && data.username.size() <= 40 &&
+      isValidRole(data.userRole) &&
+      data.userFlag is string && data.userFlag.size() <= 16 &&
+      (!('userAvatar' in data) || data.userAvatar == null || (data.userAvatar is string && data.userAvatar.size() <= 200000)) &&
+      data.action in [
+        'enter', 'leave', 'kicked', 'banned', 'ban_ip', 'ban_device',
+        'ban_both', 'unbanned', 'bind', 'unbind', 'gift', 'mute', 'unmute', 'admin'
+      ] &&
+      (!('details' in data) || data.details == null || (data.details is string && data.details.size() <= 200)) &&
+      (!('ipAddress' in data) || data.ipAddress == null || (data.ipAddress is string && data.ipAddress.size() <= 64)) &&
+      (!('deviceId' in data) || data.deviceId == null || (data.deviceId is string && data.deviceId.size() <= 64)) &&
+      data.timestamp is string && data.timestamp.size() <= 40 &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidSupervisorReport(data) {
+      return data.keys().hasAll([
+        'id', 'roomId', 'actorUid', 'actorName', 'actorRole',
+        'actionType', 'actionLabel', 'timestamp', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'roomId', 'actorUid', 'actorName', 'actorRole',
+        'actionType', 'actionLabel', 'targetUid', 'targetName',
+        'details', 'timestamp', 'createdAt'
+      ]) &&
+      isValidId(data.id) &&
+      isValidId(data.roomId) &&
+      isValidId(data.actorUid) &&
+      data.actorName is string && data.actorName.size() >= 1 && data.actorName.size() <= 50 &&
+      isValidRole(data.actorRole) &&
+      data.actionType is string && data.actionType.size() >= 1 && data.actionType.size() <= 40 &&
+      data.actionLabel is string && data.actionLabel.size() >= 1 && data.actionLabel.size() <= 120 &&
+      (!('targetUid' in data) || data.targetUid == null || (data.targetUid is string && data.targetUid.size() <= 128)) &&
+      (!('targetName' in data) || data.targetName == null || (data.targetName is string && data.targetName.size() <= 50)) &&
+      (!('details' in data) || data.details == null || (data.details is string && data.details.size() <= 300)) &&
+      data.timestamp is string && data.timestamp.size() <= 40 &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidWebRtcSignal(data) {
+      return data.keys().hasAll([
+        'id', 'roomId', 'sessionId', 'fromUid', 'toUid', 'type', 'sdp', 'iceCandidates', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'roomId', 'sessionId', 'fromUid', 'toUid', 'type', 'sdp', 'iceCandidates', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.id) &&
+      isValidId(data.roomId) &&
+      isValidId(data.sessionId) &&
+      isValidId(data.fromUid) &&
+      isValidId(data.toUid) &&
+      data.type in ['offer', 'answer'] &&
+      data.sdp is string && data.sdp.size() >= 1 && data.sdp.size() <= 20000 &&
+      data.iceCandidates is list && data.iceCandidates.size() <= 80 &&
+      (data.iceCandidates.size() == 0 || (data.iceCandidates[0] is string && data.iceCandidates[0].size() <= 1500)) &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
     }
 
     function isValidPrivateConversation(data) {
@@ -488,7 +634,7 @@ service cloud.firestore {
             'expiresAt', 'expiresAtMs', 'isActive', 'roleQuotas', 'micDurations',
             'occupantsCount', 'activeSpeakerId', 'speakerStartedAtMs', 'isMicTimerPaused',
             'micPausedRemainingSec', 'micQueue', 'mutedUserIds', 'isMicLocked',
-            'activeVideoStream', 'updatedAt'
+            'reportsAllowedUsers', 'reportsAllowedRoles', 'activeVideoStream', 'micSessionId', 'lastKickEvent', 'lastBroadcastEvent', 'updatedAt'
           ])
         );
       allow delete: if isValidId(roomId) && (isAdmin() || existing().isPublic == true);
@@ -517,7 +663,7 @@ service cloud.firestore {
               incoming().diff(existing()).affectedKeys().hasOnly([
                 'username', 'avatar', 'role', 'countryCode', 'flag', 'level',
                 'coins', 'giftsReceivedCount', 'textColor', 'mood',
-                'isPrivateChatLocked', 'lastSeenAt'
+                'isPrivateChatLocked', 'ipAddress', 'deviceId', 'lastSeenAt'
               ])
             ) ||
             (
@@ -611,6 +757,86 @@ service cloud.firestore {
         allow delete: if isValidId(roomId) &&
           isValidId(reportId) &&
           isAdmin();
+      }
+
+      // Room Subcollection: Entry / Exit & Moderation Logs
+      match /logs/{logId} {
+        allow get: if isValidId(roomId) && isValidId(logId) && (resource == null || resource.data.roomId == roomId);
+        allow list: if resource.data.roomId == roomId;
+        allow create: if isValidId(roomId) &&
+          isValidId(logId) &&
+          isValidRoomLog(incoming()) &&
+          incoming().id == logId &&
+          incoming().roomId == roomId &&
+          incoming().createdAt == request.time &&
+          roomExists(roomId);
+        allow update: if false;
+        allow delete: if isValidId(roomId) &&
+          isValidId(logId) &&
+          existing().roomId == roomId;
+      }
+
+      // Room Subcollection: Real-Time Global Broadcasts
+      match /broadcasts/{broadcastId} {
+        allow get: if isValidId(roomId) && isValidId(broadcastId) && (resource == null || resource.data.roomId == roomId);
+        allow list: if resource.data.roomId == roomId;
+        allow create: if isValidId(roomId) &&
+          isValidId(broadcastId) &&
+          isValidRoomBroadcastDoc(incoming()) &&
+          incoming().id == broadcastId &&
+          incoming().roomId == roomId &&
+          incoming().createdAt == request.time &&
+          roomExists(roomId);
+        allow update: if false;
+        allow delete: if isValidId(roomId) &&
+          isValidId(broadcastId) &&
+          existing().roomId == roomId;
+      }
+
+      // Room Subcollection: Supervisor Activity Reports
+      match /supervisor_reports/{reportId} {
+        allow get: if isValidId(roomId) && isValidId(reportId) && (resource == null || resource.data.roomId == roomId);
+        allow list: if resource.data.roomId == roomId;
+        allow create: if isValidId(roomId) &&
+          isValidId(reportId) &&
+          isValidSupervisorReport(incoming()) &&
+          incoming().id == reportId &&
+          incoming().roomId == roomId &&
+          incoming().createdAt == request.time &&
+          roomExists(roomId);
+        allow update: if false;
+        allow delete: if isValidId(roomId) &&
+          isValidId(reportId) &&
+          existing().roomId == roomId;
+      }
+
+      // Room Subcollection: WebRTC Live Mic Audio Signaling
+      match /webrtc_signals/{signalId} {
+        allow get: if isValidId(roomId) && isValidId(signalId) && (resource == null || resource.data.roomId == roomId);
+        allow list: if resource.data.roomId == roomId;
+        allow create: if isValidId(roomId) &&
+          isValidId(signalId) &&
+          isValidWebRtcSignal(incoming()) &&
+          incoming().id == signalId &&
+          incoming().roomId == roomId &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          roomExists(roomId);
+        allow update: if isValidId(roomId) &&
+          isValidId(signalId) &&
+          isValidWebRtcSignal(incoming()) &&
+          incoming().id == existing().id &&
+          incoming().roomId == existing().roomId &&
+          incoming().sessionId == existing().sessionId &&
+          incoming().fromUid == existing().fromUid &&
+          incoming().toUid == existing().toUid &&
+          incoming().type == existing().type &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['sdp', 'iceCandidates', 'updatedAt']);
+        allow delete: if isValidId(roomId) &&
+          isValidId(signalId) &&
+          existing().roomId == roomId;
       }
     }
 

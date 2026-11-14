@@ -297,9 +297,30 @@
           "type": "boolean",
           "description": "When true, mic is restricted to staff."
         },
+        "reportsAllowedUsers": {
+          "type": "array",
+          "description": "List of ranked user IDs or usernames permitted by the Master to view Supervisor Reports (max 100)."
+        },
+        "reportsAllowedRoles": {
+          "type": "array",
+          "description": "List of non-owner rank keys permitted by the Master to view Supervisor Reports (max 6)."
+        },
         "activeVideoStream": {
           "type": "object",
           "description": "Active live stream state object or null."
+        },
+        "micSessionId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Unique identifier for the active speaker WebRTC audio session."
+        },
+        "lastKickEvent": {
+          "type": "object",
+          "description": "Most recent immediate kick notification payload or null."
+        },
+        "lastBroadcastEvent": {
+          "type": "object",
+          "description": "Most recent global real-time broadcast event visible to all room occupants in the alert bar."
         },
         "isPublic": {
           "type": "boolean",
@@ -405,6 +426,14 @@
         },
         "isPrivateChatLocked": {
           "type": "boolean"
+        },
+        "ipAddress": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "deviceId": {
+          "type": "string",
+          "maxLength": 64
         },
         "joinedAt": {
           "type": "string",
@@ -528,6 +557,15 @@
         "targetUid": {
           "type": "string",
           "maxLength": 128
+        },
+        "banType": {
+          "type": "string",
+          "enum": ["ip", "device", "both"],
+          "description": "Scope of ban: IP address only, device ID only, or both combined."
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 200
         },
         "bannedAt": {
           "type": "string",
@@ -837,6 +875,305 @@
         "reason",
         "createdAt"
       ]
+    },
+    "RoomLog": {
+      "title": "RoomLog",
+      "description": "Chronological entry/exit and kick/ban log entry for a voice chat room.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "roomId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "username": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "userRole": {
+          "type": "string",
+          "enum": ["owner", "vip", "admin", "super_admin", "member", "guest"]
+        },
+        "userFlag": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "userAvatar": {
+          "type": "string",
+          "maxLength": 200000
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "enter",
+            "leave",
+            "kicked",
+            "banned",
+            "ban_ip",
+            "ban_device",
+            "ban_both",
+            "unbanned",
+            "bind",
+            "unbind",
+            "gift",
+            "mute",
+            "unmute",
+            "admin"
+          ]
+        },
+        "details": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "ipAddress": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "deviceId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "timestamp": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "roomId",
+        "userId",
+        "username",
+        "userRole",
+        "userFlag",
+        "action",
+        "timestamp",
+        "createdAt"
+      ]
+    },
+    "SupervisorReport": {
+      "title": "SupervisorReport",
+      "description": "Administrative activity and moderation audit report logged by Room Master and Supervisors.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "roomId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "actorUid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "actorName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "actorRole": {
+          "type": "string",
+          "enum": ["owner", "vip", "admin", "super_admin", "member", "guest"]
+        },
+        "actionType": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "actionLabel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "targetUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "targetName": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "details": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "timestamp": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "roomId",
+        "actorUid",
+        "actorName",
+        "actorRole",
+        "actionType",
+        "actionLabel",
+        "timestamp",
+        "createdAt"
+      ]
+    },
+    "WebRtcSignal": {
+      "title": "WebRtcSignal",
+      "description": "WebRTC SDP offer/answer and trickle ICE candidates exchanged between live room mic speaker and listeners.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "roomId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "sessionId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "fromUid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "toUid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["offer", "answer"]
+        },
+        "sdp": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "iceCandidates": {
+          "type": "array",
+          "description": "JSON-serialized RTCIceCandidateInit strings (max 80)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "roomId",
+        "sessionId",
+        "fromUid",
+        "toUid",
+        "type",
+        "sdp",
+        "iceCandidates",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "RoomBroadcast": {
+      "title": "RoomBroadcast",
+      "description": "Immutable real-time global broadcast event delivered to all occupants inside a room simultaneously.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "roomId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "enter",
+            "leave",
+            "bind",
+            "unbind",
+            "gift",
+            "ban",
+            "ban_ip",
+            "ban_device",
+            "ban_both",
+            "unban",
+            "kick",
+            "mute",
+            "unmute",
+            "admin"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "actorName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "targetName": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "giftData": {
+          "type": "object"
+        },
+        "createdAtMs": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "roomId",
+        "category",
+        "title",
+        "message",
+        "actorName",
+        "createdAtMs",
+        "createdAt"
+      ]
     }
   },
   "firestore": {
@@ -875,6 +1212,22 @@
     "/rooms/{roomId}/reports/{reportId}": {
       "schema": { "$ref": "#/entities/RoomReport" },
       "description": "User-submitted abuse reports for moderation compliance."
+    },
+    "/rooms/{roomId}/logs/{logId}": {
+      "schema": { "$ref": "#/entities/RoomLog" },
+      "description": "Chronological room entry and exit logs."
+    },
+    "/rooms/{roomId}/broadcasts/{broadcastId}": {
+      "schema": { "$ref": "#/entities/RoomBroadcast" },
+      "description": "Real-time global broadcast events visible to all room occupants simultaneously."
+    },
+    "/rooms/{roomId}/supervisor_reports/{reportId}": {
+      "schema": { "$ref": "#/entities/SupervisorReport" },
+      "description": "Supervisor administrative activity reports inside the room."
+    },
+    "/rooms/{roomId}/webrtc_signals/{signalId}": {
+      "schema": { "$ref": "#/entities/WebRtcSignal" },
+      "description": "Ephemeral WebRTC signaling documents for live voice room mic audio streaming."
     },
     "/private_chats/{chatId}": {
       "schema": { "$ref": "#/entities/PrivateConversation" },

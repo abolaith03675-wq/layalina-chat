@@ -18,6 +18,7 @@ import {
 import { signInAnonymously, signInWithPopup, signOut, User } from 'firebase/auth';
 import { auth, db, googleProvider, handleFirestoreError, OperationType } from '../firebase';
 import {
+  BanType,
   BannedUserEntry,
   ChatMessage,
   DEFAULT_MIC_DURATIONS,
@@ -26,9 +27,14 @@ import {
   PrivateMessage,
   RoleQuotas,
   Room,
+  RoomBroadcastEvent,
   RoomCredential,
+  RoomLogAction,
+  RoomLogEntry,
+  SupervisorReportEntry,
   UserProfile,
   UserRole,
+  WebRtcSignalDoc,
   ROLE_HIERARCHY,
 } from '../types/loqana';
 import { DEFAULT_CROWN_AVATAR } from '../data/mockLoqanaData';
@@ -254,7 +260,26 @@ export async function compressImageDataUrl(
 // =========================================================
 
 const LOCAL_CLIENT_UID_KEY = 'layali_local_client_uid_v1';
+const LOCAL_CLIENT_IP_KEY = 'layali_local_client_ip_v1';
 const LOCAL_PROFILE_CACHE_KEY = 'layali_local_profile_cache_v1';
+
+export function getOrCreateLocalClientIp(uid?: string): string {
+  try {
+    const existing = window.localStorage.getItem(LOCAL_CLIENT_IP_KEY);
+    if (existing && /^\d{1,3}(\.\d{1,3}){3}$/.test(existing)) {
+      return existing;
+    }
+    const seed = (uid || getOrCreateLocalClientUid()).split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    const oct2 = 20 + ((seed * 7) % 210);
+    const oct3 = 10 + ((seed * 13) % 230);
+    const oct4 = 12 + (Math.floor(Math.random() * 220));
+    const generated = `185.${oct2}.${oct3}.${oct4}`;
+    window.localStorage.setItem(LOCAL_CLIENT_IP_KEY, generated);
+    return generated;
+  } catch {
+    return '185.104.52.19';
+  }
+}
 
 export function getOrCreateLocalClientUid(): string {
   const authUid = auth.currentUser?.uid;
@@ -277,9 +302,10 @@ export function getOrCreateLocalClientUid(): string {
 export function loadLocalUserProfile(uid: string): Partial<UserProfile> {
   try {
     const raw = window.localStorage.getItem(LOCAL_PROFILE_CACHE_KEY);
-    if (!raw) return {};
+    const fallbackIp = getOrCreateLocalClientIp(uid);
+    if (!raw) return { ipAddress: fallbackIp };
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (!parsed || typeof parsed !== 'object') return {};
+    if (!parsed || typeof parsed !== 'object') return { ipAddress: fallbackIp };
     return {
       id: uid,
       username: typeof parsed.username === 'string' && parsed.username.trim() ? parsed.username : undefined,
@@ -296,9 +322,10 @@ export function loadLocalUserProfile(uid: string): Partial<UserProfile> {
       isSoundEffectsMuted: typeof parsed.isSoundEffectsMuted === 'boolean' ? parsed.isSoundEffectsMuted : undefined,
       profilePin: typeof parsed.profilePin === 'string' ? parsed.profilePin : undefined,
       deviceId: typeof parsed.deviceId === 'string' ? parsed.deviceId : undefined,
+      ipAddress: typeof parsed.ipAddress === 'string' && parsed.ipAddress ? parsed.ipAddress : fallbackIp,
     };
   } catch {
-    return {};
+    return { ipAddress: getOrCreateLocalClientIp(uid) };
   }
 }
 
@@ -449,6 +476,7 @@ export async function ensureUserProfile(userOrUid?: User | string | null): Promi
     isSoundEffectsMuted: Boolean(pubData?.isSoundEffectsMuted ?? localCached.isSoundEffectsMuted),
     profilePin: privData?.profilePin || localCached.profilePin || '',
     deviceId: privData?.deviceId || localCached.deviceId || defaultDeviceId,
+    ipAddress: localCached.ipAddress || getOrCreateLocalClientIp(uid),
   };
   saveLocalUserProfile(uid, profile);
   return profile;
@@ -653,6 +681,55 @@ export async function cleanupLegacyDemoRooms(
   }
 }
 
+function mapRoomSnapshot(id: string, r: Record<string, any>): Room {
+  return {
+    id,
+    code: r.code || '1000',
+    name: r.name || '',
+    category: r.category || 'all',
+    countryName: r.countryName || '',
+    countryKeywords: Array.isArray(r.countryKeywords) ? r.countryKeywords : [],
+    flag: r.flag || '🌐',
+    description: r.description || '',
+    ownerName: r.ownerName || 'ماستر الروم',
+    ownerAvatar: r.ownerAvatar || DEFAULT_CROWN_AVATAR,
+    ownerId: r.ownerId || r.ownerUid || '',
+    ownerUid: r.ownerUid || '',
+    ownerColor: r.ownerColor || '#ef4444',
+    masterPinCode: r.masterPinCode || '1976',
+    occupantsCount: Number(r.occupantsCount || 0),
+    maxCapacity: Number(r.maxCapacity || 100),
+    isLocked: Boolean(r.isLocked),
+    password: r.password || undefined,
+    welcomeMessage: r.welcomeMessage || '',
+    activeSpeakerId: r.activeSpeakerId || null,
+    speakerStartedAtMs: typeof r.speakerStartedAtMs === 'number' ? r.speakerStartedAtMs : null,
+    isMicTimerPaused: Boolean(r.isMicTimerPaused),
+    micPausedRemainingSec: typeof r.micPausedRemainingSec === 'number' ? r.micPausedRemainingSec : null,
+    micQueue: Array.isArray(r.micQueue) ? r.micQueue : [],
+    isGoldName: Boolean(r.isGoldName),
+    validityDays: typeof r.validityDays === 'number' && r.validityDays >= 1 ? r.validityDays : 30,
+    expiresAt: typeof r.expiresAt === 'string' ? r.expiresAt : undefined,
+    expiresAtMs: parseEpochMs(r.expiresAtMs) ?? parseEpochMs(r.expiresAt) ?? undefined,
+    isActive: r.isActive !== undefined ? Boolean(r.isActive) : true,
+    createdAtMs: r.createdAt ? timestampToMs(r.createdAt) : Date.now(),
+    roleQuotas: r.roleQuotas || { vip: 5, admin: 10, super_admin: 15, member: 50 },
+    micDurations: normalizeMicDurations(r.micDurations),
+    mutedUserIds: Array.isArray(r.mutedUserIds) ? r.mutedUserIds : [],
+    isMicLocked: Boolean(r.isMicLocked),
+    reportsAllowedUsers: Array.isArray(r.reportsAllowedUsers) ? r.reportsAllowedUsers : [],
+    reportsAllowedRoles: Array.isArray(r.reportsAllowedRoles) ? (r.reportsAllowedRoles as UserRole[]) : [],
+    activeVideoStream: r.activeVideoStream || null,
+    micSessionId: typeof r.micSessionId === 'string' ? r.micSessionId : null,
+    lastKickEvent: r.lastKickEvent && typeof r.lastKickEvent === 'object' ? r.lastKickEvent : null,
+    lastBroadcastEvent:
+      r.lastBroadcastEvent && typeof r.lastBroadcastEvent === 'object'
+        ? (r.lastBroadcastEvent as RoomBroadcastEvent)
+        : null,
+    isPublic: Boolean(r.isPublic),
+  } as Room;
+}
+
 export function subscribeRooms(onUpdate: (rooms: Room[]) => void): Unsubscribe {
   const q = query(collection(db, 'rooms'), where('isPublic', '==', true));
   return onSnapshot(
@@ -660,51 +737,29 @@ export function subscribeRooms(onUpdate: (rooms: Room[]) => void): Unsubscribe {
     snap => {
       const list: Room[] = snap.docs
         .filter(d => !DEMO_ROOM_IDS.has(d.id))
-        .map(d => {
-          const r = d.data();
-          return {
-            id: d.id,
-            code: r.code || '1000',
-            name: r.name || '',
-            category: r.category || 'all',
-            countryName: r.countryName || '',
-            countryKeywords: Array.isArray(r.countryKeywords) ? r.countryKeywords : [],
-            flag: r.flag || '🌐',
-            description: r.description || '',
-            ownerName: r.ownerName || 'ماستر الروم',
-            ownerAvatar: r.ownerAvatar || DEFAULT_CROWN_AVATAR,
-            ownerId: r.ownerId || r.ownerUid || '',
-            ownerUid: r.ownerUid || '',
-            ownerColor: r.ownerColor || '#ef4444',
-            masterPinCode: r.masterPinCode || '1976',
-            occupantsCount: Number(r.occupantsCount || 0),
-            maxCapacity: Number(r.maxCapacity || 100),
-            isLocked: Boolean(r.isLocked),
-            password: r.password || undefined,
-            welcomeMessage: r.welcomeMessage || '',
-            activeSpeakerId: r.activeSpeakerId || null,
-            speakerStartedAtMs: typeof r.speakerStartedAtMs === 'number' ? r.speakerStartedAtMs : null,
-            isMicTimerPaused: Boolean(r.isMicTimerPaused),
-            micPausedRemainingSec: typeof r.micPausedRemainingSec === 'number' ? r.micPausedRemainingSec : null,
-            micQueue: Array.isArray(r.micQueue) ? r.micQueue : [],
-            isGoldName: Boolean(r.isGoldName),
-            validityDays: typeof r.validityDays === 'number' && r.validityDays >= 1 ? r.validityDays : 30,
-            expiresAt: typeof r.expiresAt === 'string' ? r.expiresAt : undefined,
-            expiresAtMs: parseEpochMs(r.expiresAtMs) ?? parseEpochMs(r.expiresAt) ?? undefined,
-            isActive: r.isActive !== undefined ? Boolean(r.isActive) : true,
-            createdAtMs: r.createdAt ? timestampToMs(r.createdAt) : Date.now(),
-            roleQuotas: r.roleQuotas || { vip: 5, admin: 10, super_admin: 15, member: 50 },
-            micDurations: normalizeMicDurations(r.micDurations),
-            mutedUserIds: Array.isArray(r.mutedUserIds) ? r.mutedUserIds : [],
-            isMicLocked: Boolean(r.isMicLocked),
-            activeVideoStream: r.activeVideoStream || null,
-            isPublic: Boolean(r.isPublic),
-          } as Room;
-        })
+        .map(d => mapRoomSnapshot(d.id, d.data() as Record<string, any>))
         .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
       onUpdate(list);
     },
     err => handleFirestoreError(err, OperationType.LIST, 'rooms')
+  );
+}
+
+export function subscribeRoomDoc(
+  roomId: string,
+  onUpdate: (room: Room | null) => void
+): Unsubscribe {
+  const cleanId = sanitizeId(roomId);
+  return onSnapshot(
+    doc(db, 'rooms', cleanId),
+    snap => {
+      if (!snap.exists()) {
+        onUpdate(null);
+        return;
+      }
+      onUpdate(mapRoomSnapshot(snap.id, snap.data() as Record<string, any>));
+    },
+    err => handleFirestoreError(err, OperationType.GET, `rooms/${cleanId}`)
   );
 }
 
@@ -798,7 +853,12 @@ export async function createRoomInDb(
     micDurations,
     mutedUserIds: [] as string[],
     isMicLocked: false,
+    reportsAllowedUsers: [] as string[],
+    reportsAllowedRoles: [] as UserRole[],
     activeVideoStream: null,
+    micSessionId: null,
+    lastKickEvent: null,
+    lastBroadcastEvent: null,
     isPublic: true,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -887,6 +947,52 @@ export async function updateRoomMicDurationsInDb(
   }
 }
 
+export async function updateRoomReportsPermissionsInDb(
+  roomId: string,
+  allowedUsers: string[],
+  allowedRoles: UserRole[]
+): Promise<void> {
+  const cleanId = sanitizeId(roomId);
+  const safeUsers = Array.from(
+    new Set(allowedUsers.map(u => truncateString(String(u || '').trim(), 64)).filter(Boolean))
+  ).slice(0, 100);
+  const safeRoles = Array.from(
+    new Set(
+      allowedRoles.filter(
+        r => r in ROLE_HIERARCHY && r !== 'owner' && r !== 'guest'
+      )
+    )
+  ).slice(0, 6);
+
+  try {
+    await updateDoc(doc(db, 'rooms', cleanId), {
+      reportsAllowedUsers: safeUsers,
+      reportsAllowedRoles: safeRoles,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, `rooms/${cleanId}`);
+  }
+}
+
+export function canUserViewSupervisorReports(
+  room: Room | undefined,
+  user: Pick<UserProfile, 'id' | 'username' | 'role'>
+): boolean {
+  if (!room) return false;
+  if (user.role === 'owner') return true;
+  if (user.role === 'guest') return false;
+
+  const allowedRoles = room.reportsAllowedRoles || [];
+  if (allowedRoles.includes(user.role)) return true;
+
+  const allowedUsers = room.reportsAllowedUsers || [];
+  const lowerName = user.username.trim().toLowerCase();
+  return allowedUsers.some(
+    entry => entry === user.id || entry.trim().toLowerCase() === lowerName
+  );
+}
+
 export async function deactivateExpiredRoomInDb(roomId: string): Promise<void> {
   const cleanId = sanitizeId(roomId);
   try {
@@ -926,6 +1032,14 @@ export async function updateRoomLiveStateInDb(
     isMicLocked?: boolean;
     mutedUserIds?: string[];
     activeVideoStream?: LiveVideoStream | null;
+    micSessionId?: string | null;
+    lastKickEvent?: {
+      targetUid: string;
+      targetName: string;
+      kickedBy: string;
+      kickedAtMs: number;
+    } | null;
+    lastBroadcastEvent?: RoomBroadcastEvent | null;
   }
 ): Promise<void> {
   const cleanId = sanitizeId(roomId);
@@ -941,6 +1055,48 @@ export async function updateRoomLiveStateInDb(
   if (patch.isMicLocked !== undefined) payload.isMicLocked = patch.isMicLocked;
   if (patch.mutedUserIds !== undefined) payload.mutedUserIds = patch.mutedUserIds.slice(0, 200);
   if (patch.activeVideoStream !== undefined) payload.activeVideoStream = patch.activeVideoStream;
+  if (patch.micSessionId !== undefined) {
+    payload.micSessionId = patch.micSessionId ? truncateString(sanitizeId(patch.micSessionId), 128) : null;
+  }
+  if (patch.lastKickEvent !== undefined) {
+    payload.lastKickEvent = patch.lastKickEvent
+      ? {
+          targetUid: sanitizeId(patch.lastKickEvent.targetUid),
+          targetName: truncateString(patch.lastKickEvent.targetName || 'عضو', 50),
+          kickedBy: truncateString(patch.lastKickEvent.kickedBy || 'مشرف', 50),
+          kickedAtMs: Math.max(0, Math.round(patch.lastKickEvent.kickedAtMs || Date.now())),
+        }
+      : null;
+  }
+  if (patch.lastBroadcastEvent !== undefined) {
+    if (patch.lastBroadcastEvent) {
+      const ev = patch.lastBroadcastEvent;
+      const cleanEv: Record<string, unknown> = {
+        id: sanitizeId(ev.id || `bc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`),
+        category: ev.category,
+        title: truncateString((ev.title || 'تنبيه الغرفة').trim() || 'تنبيه الغرفة', 80),
+        message: truncateString((ev.message || 'حدث جديد في الغرفة').trim() || 'حدث جديد في الغرفة', 400),
+        actorName: truncateString((ev.actorName || 'إدارة الروم').trim() || 'إدارة الروم', 50),
+        createdAtMs: Math.max(0, Math.round(ev.createdAtMs || Date.now())),
+      };
+      if (ev.targetName && ev.targetName.trim()) {
+        cleanEv.targetName = truncateString(ev.targetName.trim(), 50);
+      }
+      if (ev.giftData) {
+        cleanEv.giftData = {
+          giftId: truncateString(ev.giftData.giftId || 'gift', 40) || 'gift',
+          giftName: truncateString(ev.giftData.giftName || 'هدية', 60) || 'هدية',
+          icon: truncateString(ev.giftData.icon || '🎁', 16) || '🎁',
+          value: Math.max(0, Number(ev.giftData.value || 0)),
+          senderName: truncateString((ev.giftData.senderName || 'عضو').trim() || 'عضو', 50),
+          recipientName: truncateString((ev.giftData.recipientName || 'الروم العام').trim() || 'الروم العام', 50),
+        };
+      }
+      payload.lastBroadcastEvent = cleanEv;
+    } else {
+      payload.lastBroadcastEvent = null;
+    }
+  }
 
   try {
     await updateDoc(doc(db, 'rooms', cleanId), payload);
@@ -983,6 +1139,8 @@ export function subscribeRoomParticipants(
             isMuted: Boolean(data.isMuted),
             isBound: Boolean(data.isBound),
             isPrivateChatLocked: Boolean(data.isPrivateChatLocked),
+            ipAddress: typeof data.ipAddress === 'string' && data.ipAddress ? data.ipAddress : undefined,
+            deviceId: typeof data.deviceId === 'string' && data.deviceId ? data.deviceId : undefined,
           } as UserProfile;
         })
         .sort((a, b) => (ROLE_HIERARCHY[b.role]?.level || 0) - (ROLE_HIERARCHY[a.role]?.level || 0));
@@ -1011,6 +1169,8 @@ export async function joinRoomAsParticipant(
   const avatarSafe = await compressImageDataUrl(user.avatar || DEFAULT_CROWN_AVATAR, 320, 180000);
   const safeUsername = truncateString((user.username || 'عضو ليالي').trim() || 'عضو ليالي', 40);
   const safeRole: UserRole = user.role && user.role in ROLE_HIERARCHY ? user.role : 'guest';
+  const safeIp = truncateString(user.ipAddress || getOrCreateLocalClientIp(uid), 64);
+  const safeDeviceId = truncateString(user.deviceId || `DEV-${uid.slice(-6).toUpperCase()}`, 64);
 
   if (existingSnap.exists()) {
     try {
@@ -1026,6 +1186,8 @@ export async function joinRoomAsParticipant(
         textColor: truncateString(user.textColor || '#94a3b8', 20),
         mood: truncateString(user.mood || '', 120),
         isPrivateChatLocked: Boolean(user.isPrivateChatLocked),
+        ipAddress: safeIp,
+        deviceId: safeDeviceId,
         lastSeenAt: serverTimestamp(),
       });
     } catch (err) {
@@ -1049,6 +1211,8 @@ export async function joinRoomAsParticipant(
         isMuted: isMutedInRoom,
         isBound: false,
         isPrivateChatLocked: Boolean(user.isPrivateChatLocked),
+        ipAddress: safeIp,
+        deviceId: safeDeviceId,
         joinedAt: serverTimestamp(),
         lastSeenAt: serverTimestamp(),
       });
@@ -1229,6 +1393,8 @@ export function subscribeRoomBans(
           deviceId: data.deviceId || undefined,
           username: data.username,
           targetUid: data.targetUid || undefined,
+          banType: (data.banType as BanType) || 'both',
+          reason: data.reason || undefined,
           bannedAt: data.bannedAt,
           bannedBy: data.bannedBy,
           bannedByUid: data.bannedByUid,
@@ -1254,6 +1420,8 @@ export async function fetchRoomBansOnce(roomId: string): Promise<BannedUserEntry
         deviceId: data.deviceId || undefined,
         username: data.username,
         targetUid: data.targetUid || undefined,
+        banType: (data.banType as BanType) || 'both',
+        reason: data.reason || undefined,
         bannedAt: data.bannedAt,
         bannedBy: data.bannedBy,
       };
@@ -1263,6 +1431,25 @@ export async function fetchRoomBansOnce(roomId: string): Promise<BannedUserEntry
   }
 }
 
+export function doesBanMatchUser(
+  ban: BannedUserEntry,
+  user: { id: string; username: string; ipAddress?: string; deviceId?: string }
+): boolean {
+  const scope: BanType = ban.banType || 'both';
+  const uidMatch = Boolean(ban.targetUid && ban.targetUid === user.id);
+  const ipMatch = Boolean(ban.ip && user.ipAddress && ban.ip === user.ipAddress);
+  const deviceMatch = Boolean(ban.deviceId && user.deviceId && ban.deviceId === user.deviceId);
+  const nameMatch = ban.username.trim().toLowerCase() === user.username.trim().toLowerCase();
+
+  if (scope === 'ip') {
+    return ipMatch || uidMatch;
+  }
+  if (scope === 'device') {
+    return deviceMatch || uidMatch;
+  }
+  return ipMatch || deviceMatch || uidMatch || nameMatch;
+}
+
 export async function addRoomBanInDb(
   roomId: string,
   bannedByUid: string,
@@ -1270,11 +1457,13 @@ export async function addRoomBanInDb(
 ): Promise<void> {
   const cleanRoomId = sanitizeId(roomId);
   const banId = sanitizeId(`ban_${ban.targetUid || ban.ip}`);
+  const scope: BanType = ban.banType || 'both';
   const payload: Record<string, unknown> = {
     id: banId,
     roomId: cleanRoomId,
     ip: truncateString(ban.ip, 64),
     username: truncateString(ban.username, 40),
+    banType: scope,
     bannedAt: truncateString(ban.bannedAt, 40),
     bannedBy: truncateString(ban.bannedBy, 40),
     bannedByUid: sanitizeId(bannedByUid),
@@ -1282,6 +1471,7 @@ export async function addRoomBanInDb(
   };
   if (ban.deviceId) payload.deviceId = truncateString(ban.deviceId, 64);
   if (ban.targetUid) payload.targetUid = truncateString(ban.targetUid, 128);
+  if (ban.reason && ban.reason.trim()) payload.reason = truncateString(ban.reason.trim(), 200);
 
   try {
     await setDoc(doc(db, 'rooms', cleanRoomId, 'bans', banId), payload);
@@ -1290,18 +1480,329 @@ export async function addRoomBanInDb(
   }
 }
 
-export async function removeRoomBanInDb(roomId: string, banIdOrIp: string): Promise<void> {
+export async function removeRoomBanInDb(roomId: string, banIdentifier: string): Promise<void> {
   const cleanRoomId = sanitizeId(roomId);
   const q = query(collection(db, 'rooms', cleanRoomId, 'bans'), where('roomId', '==', cleanRoomId));
   try {
     const snap = await getDocs(q);
     for (const d of snap.docs) {
-      if (d.id === banIdOrIp || d.data().ip === banIdOrIp) {
+      const data = d.data();
+      if (
+        d.id === banIdentifier ||
+        data.ip === banIdentifier ||
+        data.deviceId === banIdentifier ||
+        data.targetUid === banIdentifier
+      ) {
         await deleteDoc(d.ref);
       }
     }
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, `rooms/${cleanRoomId}/bans`);
+  }
+}
+
+// =========================================================
+// Room Logs (Entry / Exit / Moderation Events)
+// =========================================================
+
+export function subscribeRoomLogs(
+  roomId: string,
+  onUpdate: (logs: RoomLogEntry[]) => void
+): Unsubscribe {
+  const cleanRoomId = sanitizeId(roomId);
+  const q = query(collection(db, 'rooms', cleanRoomId, 'logs'), where('roomId', '==', cleanRoomId));
+  return onSnapshot(
+    q,
+    snap => {
+      const list: RoomLogEntry[] = snap.docs
+        .map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            roomId: data.roomId,
+            userId: data.userId,
+            username: data.username,
+            userRole: (data.userRole as UserRole) || 'guest',
+            userFlag: data.userFlag || '🌐',
+            userAvatar: data.userAvatar || undefined,
+            action: data.action as RoomLogEntry['action'],
+            details: data.details || undefined,
+            ipAddress: data.ipAddress || undefined,
+            deviceId: data.deviceId || undefined,
+            timestamp: data.timestamp || '',
+            createdAtMs: timestampToMs(data.createdAt),
+          };
+        })
+        .sort((a, b) => b.createdAtMs - a.createdAtMs)
+        .slice(0, 200);
+      onUpdate(list);
+    },
+    err => handleFirestoreError(err, OperationType.LIST, `rooms/${cleanRoomId}/logs`)
+  );
+}
+
+const VALID_ROOM_LOG_ACTIONS = new Set<RoomLogAction>([
+  'enter',
+  'leave',
+  'kicked',
+  'banned',
+  'ban_ip',
+  'ban_device',
+  'ban_both',
+  'unbanned',
+  'bind',
+  'unbind',
+  'gift',
+  'mute',
+  'unmute',
+  'admin',
+]);
+
+export async function addRoomLogInDb(
+  roomId: string,
+  entry: Omit<RoomLogEntry, 'id' | 'roomId' | 'createdAtMs'>
+): Promise<void> {
+  const cleanRoomId = sanitizeId(roomId);
+  const cleanUserId = sanitizeId(entry.userId || `usr_${Date.now()}`);
+  const logId = sanitizeId(`log_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`);
+  const safeRole: UserRole = entry.userRole && entry.userRole in ROLE_HIERARCHY ? entry.userRole : 'guest';
+  const safeAction: RoomLogAction = VALID_ROOM_LOG_ACTIONS.has(entry.action) ? entry.action : 'admin';
+
+  const payload: Record<string, unknown> = {
+    id: logId,
+    roomId: cleanRoomId,
+    userId: cleanUserId,
+    username: truncateString((entry.username || 'عضو ليالي').trim() || 'عضو ليالي', 40),
+    userRole: safeRole,
+    userFlag: truncateString(entry.userFlag || '🌐', 16),
+    action: safeAction,
+    timestamp: truncateString(
+      entry.timestamp || new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
+      40
+    ),
+    createdAt: serverTimestamp(),
+  };
+
+  if (entry.userAvatar) {
+    payload.userAvatar = truncateString(entry.userAvatar, 180000);
+  }
+  if (entry.details && entry.details.trim()) {
+    payload.details = truncateString(entry.details.trim(), 200);
+  }
+  if (entry.ipAddress) {
+    payload.ipAddress = truncateString(entry.ipAddress, 64);
+  }
+  if (entry.deviceId) {
+    payload.deviceId = truncateString(entry.deviceId, 64);
+  }
+
+  try {
+    await setDoc(doc(db, 'rooms', cleanRoomId, 'logs', logId), payload);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.CREATE, `rooms/${cleanRoomId}/logs/${logId}`);
+  }
+}
+
+// =========================================================
+// Real-Time Cross-Device Room Broadcasts (Zero-Clock-Skew)
+// =========================================================
+
+const VALID_BROADCAST_CATEGORIES = new Set<RoomBroadcastEvent['category']>([
+  'enter',
+  'leave',
+  'bind',
+  'unbind',
+  'gift',
+  'ban',
+  'ban_ip',
+  'ban_device',
+  'ban_both',
+  'unban',
+  'kick',
+  'mute',
+  'unmute',
+  'admin',
+]);
+
+export async function addRoomBroadcastInDb(
+  roomId: string,
+  event: RoomBroadcastEvent
+): Promise<void> {
+  const cleanRoomId = sanitizeId(roomId);
+  const broadcastId = sanitizeId(
+    event.id || `bc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+  );
+  const safeCategory = VALID_BROADCAST_CATEGORIES.has(event.category)
+    ? event.category
+    : 'admin';
+
+  const payload: Record<string, unknown> = {
+    id: broadcastId,
+    roomId: cleanRoomId,
+    category: safeCategory,
+    title: truncateString((event.title || 'تنبيه الغرفة').trim() || 'تنبيه الغرفة', 80),
+    message: truncateString((event.message || 'حدث جديد في الغرفة').trim() || 'حدث جديد في الغرفة', 400),
+    actorName: truncateString((event.actorName || 'إدارة الروم').trim() || 'إدارة الروم', 50),
+    createdAtMs: Math.max(0, Math.round(event.createdAtMs || Date.now())),
+    createdAt: serverTimestamp(),
+  };
+
+  if (event.targetName && event.targetName.trim()) {
+    payload.targetName = truncateString(event.targetName.trim(), 50);
+  }
+  if (event.giftData) {
+    payload.giftData = {
+      giftId: truncateString(event.giftData.giftId || 'gift', 40) || 'gift',
+      giftName: truncateString(event.giftData.giftName || 'هدية', 60) || 'هدية',
+      icon: truncateString(event.giftData.icon || '🎁', 16) || '🎁',
+      value: Math.max(0, Number(event.giftData.value || 0)),
+      senderName: truncateString((event.giftData.senderName || 'عضو').trim() || 'عضو', 50),
+      recipientName: truncateString(
+        (event.giftData.recipientName || 'الروم العام').trim() || 'الروم العام',
+        50
+      ),
+    };
+  }
+
+  try {
+    await setDoc(doc(db, 'rooms', cleanRoomId, 'broadcasts', broadcastId), payload);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.CREATE, `rooms/${cleanRoomId}/broadcasts/${broadcastId}`);
+  }
+}
+
+export function subscribeRoomBroadcasts(
+  roomId: string,
+  onNewBroadcast: (ev: RoomBroadcastEvent) => void
+): Unsubscribe {
+  const cleanRoomId = sanitizeId(roomId);
+  const q = query(
+    collection(db, 'rooms', cleanRoomId, 'broadcasts'),
+    where('roomId', '==', cleanRoomId)
+  );
+  let isInitialSnapshot = true;
+  const seenIds = new Set<string>();
+
+  return onSnapshot(
+    q,
+    snap => {
+      if (isInitialSnapshot) {
+        snap.docs.forEach(d => {
+          seenIds.add(d.id);
+        });
+        isInitialSnapshot = false;
+        return;
+      }
+
+      const freshEvents: RoomBroadcastEvent[] = [];
+      for (const change of snap.docChanges()) {
+        if (change.type !== 'added') continue;
+        const d = change.doc;
+        if (seenIds.has(d.id)) continue;
+        seenIds.add(d.id);
+        const data = d.data();
+        const category = VALID_BROADCAST_CATEGORIES.has(data.category)
+          ? (data.category as RoomBroadcastEvent['category'])
+          : 'admin';
+        freshEvents.push({
+          id: data.id || d.id,
+          category,
+          title: data.title || 'تنبيه الغرفة',
+          message: data.message || '',
+          actorName: data.actorName || 'إدارة الروم',
+          targetName: data.targetName || undefined,
+          giftData: data.giftData || undefined,
+          createdAtMs:
+            typeof data.createdAtMs === 'number'
+              ? data.createdAtMs
+              : timestampToMs(data.createdAt),
+        });
+      }
+
+      freshEvents
+        .sort((a, b) => a.createdAtMs - b.createdAtMs)
+        .forEach(ev => {
+          onNewBroadcast(ev);
+        });
+    },
+    err => handleFirestoreError(err, OperationType.LIST, `rooms/${cleanRoomId}/broadcasts`)
+  );
+}
+
+// =========================================================
+// Supervisor Activity Reports
+// =========================================================
+
+export function subscribeSupervisorReports(
+  roomId: string,
+  onUpdate: (reports: SupervisorReportEntry[]) => void
+): Unsubscribe {
+  const cleanRoomId = sanitizeId(roomId);
+  const q = query(
+    collection(db, 'rooms', cleanRoomId, 'supervisor_reports'),
+    where('roomId', '==', cleanRoomId)
+  );
+  return onSnapshot(
+    q,
+    snap => {
+      const list: SupervisorReportEntry[] = snap.docs
+        .map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            roomId: data.roomId,
+            actorUid: data.actorUid,
+            actorName: data.actorName,
+            actorRole: (data.actorRole as UserRole) || 'admin',
+            actionType: data.actionType as SupervisorReportEntry['actionType'],
+            actionLabel: data.actionLabel,
+            targetUid: data.targetUid || undefined,
+            targetName: data.targetName || undefined,
+            details: data.details || undefined,
+            timestamp: data.timestamp || '',
+            createdAtMs: timestampToMs(data.createdAt),
+          };
+        })
+        .sort((a, b) => b.createdAtMs - a.createdAtMs)
+        .slice(0, 250);
+      onUpdate(list);
+    },
+    err => handleFirestoreError(err, OperationType.LIST, `rooms/${cleanRoomId}/supervisor_reports`)
+  );
+}
+
+export async function addSupervisorReportInDb(
+  roomId: string,
+  report: Omit<SupervisorReportEntry, 'id' | 'roomId' | 'createdAtMs'>
+): Promise<void> {
+  const cleanRoomId = sanitizeId(roomId);
+  const cleanActorUid = sanitizeId(report.actorUid);
+  const reportId = sanitizeId(`sr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`);
+  const safeRole: UserRole = report.actorRole && report.actorRole in ROLE_HIERARCHY ? report.actorRole : 'admin';
+
+  const payload: Record<string, unknown> = {
+    id: reportId,
+    roomId: cleanRoomId,
+    actorUid: cleanActorUid,
+    actorName: truncateString((report.actorName || 'مشرف الروم').trim() || 'مشرف الروم', 50),
+    actorRole: safeRole,
+    actionType: truncateString(report.actionType, 40),
+    actionLabel: truncateString((report.actionLabel || 'إجراء إداري').trim() || 'إجراء إداري', 120),
+    timestamp: truncateString(
+      report.timestamp || new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
+      40
+    ),
+    createdAt: serverTimestamp(),
+  };
+
+  if (report.targetUid) payload.targetUid = truncateString(report.targetUid, 128);
+  if (report.targetName) payload.targetName = truncateString(report.targetName.trim(), 50);
+  if (report.details && report.details.trim()) payload.details = truncateString(report.details.trim(), 300);
+
+  try {
+    await setDoc(doc(db, 'rooms', cleanRoomId, 'supervisor_reports', reportId), payload);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.CREATE, `rooms/${cleanRoomId}/supervisor_reports/${reportId}`);
   }
 }
 
@@ -1362,14 +1863,24 @@ export async function fetchRoomMessageTimestamp(
 ): Promise<Timestamp | null> {
   const cleanRoomId = sanitizeId(roomId);
   const cleanMsgId = sanitizeId(msgId);
-  try {
-    const snap = await getDocFromServer(doc(db, 'rooms', cleanRoomId, 'messages', cleanMsgId));
-    const createdAt = snap.data()?.createdAt;
-    return createdAt instanceof Timestamp ? createdAt : null;
-  } catch (err) {
-    console.warn('Could not fetch message server timestamp:', err);
-    return null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const snap = await getDocFromServer(doc(db, 'rooms', cleanRoomId, 'messages', cleanMsgId));
+      const createdAt = snap.data()?.createdAt;
+      if (createdAt instanceof Timestamp) {
+        return createdAt;
+      }
+      if (attempt === 0) {
+        await new Promise(resolve => setTimeout(resolve, 350));
+      }
+    } catch (err) {
+      console.warn('Could not fetch message server timestamp:', err);
+      if (attempt === 0) {
+        await new Promise(resolve => setTimeout(resolve, 350));
+      }
+    }
   }
+  return null;
 }
 
 export async function sendRoomMessageInDb(
@@ -1813,4 +2324,116 @@ export function verifyRoomEntranceRole(
     verified: false,
     isMasterMatch: false,
   };
+}
+
+// =========================================================
+// WebRTC Live Mic Audio Signaling
+// =========================================================
+
+export function subscribeRoomWebRtcSignals(
+  roomId: string,
+  onUpdate: (signals: WebRtcSignalDoc[]) => void
+): Unsubscribe {
+  const cleanRoomId = sanitizeId(roomId);
+  const q = query(
+    collection(db, 'rooms', cleanRoomId, 'webrtc_signals'),
+    where('roomId', '==', cleanRoomId)
+  );
+  return onSnapshot(
+    q,
+    snap => {
+      const list: WebRtcSignalDoc[] = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          roomId: data.roomId,
+          sessionId: data.sessionId,
+          fromUid: data.fromUid,
+          toUid: data.toUid,
+          type: data.type === 'answer' ? 'answer' : 'offer',
+          sdp: typeof data.sdp === 'string' ? data.sdp : '',
+          iceCandidates: Array.isArray(data.iceCandidates)
+            ? data.iceCandidates.filter((c): c is string => typeof c === 'string')
+            : [],
+          createdAtMs: timestampToMs(data.createdAt),
+        };
+      });
+      onUpdate(list);
+    },
+    err => {
+      console.warn('WebRTC signaling subscription warning:', err);
+    }
+  );
+}
+
+export async function upsertWebRtcSignalInDb(
+  roomId: string,
+  signal: {
+    id: string;
+    sessionId: string;
+    fromUid: string;
+    toUid: string;
+    type: 'offer' | 'answer';
+    sdp: string;
+    iceCandidates: string[];
+  }
+): Promise<void> {
+  const cleanRoomId = sanitizeId(roomId);
+  const cleanSignalId = sanitizeId(signal.id);
+  const ref = doc(db, 'rooms', cleanRoomId, 'webrtc_signals', cleanSignalId);
+  const safeSdp = truncateString(signal.sdp, 19500);
+  const safeCandidates = signal.iceCandidates
+    .filter(c => typeof c === 'string' && c.length > 0 && c.length <= 1500)
+    .slice(0, 80);
+
+  if (!safeSdp) return;
+
+  try {
+    const existingSnap = await getDoc(ref);
+    if (existingSnap.exists()) {
+      await updateDoc(ref, {
+        sdp: safeSdp,
+        iceCandidates: safeCandidates,
+        updatedAt: serverTimestamp(),
+      });
+    } else {
+      await setDoc(ref, {
+        id: cleanSignalId,
+        roomId: cleanRoomId,
+        sessionId: sanitizeId(signal.sessionId),
+        fromUid: sanitizeId(signal.fromUid),
+        toUid: sanitizeId(signal.toUid),
+        type: signal.type,
+        sdp: safeSdp,
+        iceCandidates: safeCandidates,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+  } catch (err) {
+    console.warn('WebRTC signal upsert warning:', err);
+  }
+}
+
+export async function cleanupStaleWebRtcSignalsInDb(
+  roomId: string,
+  activeSessionId?: string | null
+): Promise<void> {
+  const cleanRoomId = sanitizeId(roomId);
+  const cleanKeep = activeSessionId ? sanitizeId(activeSessionId) : null;
+  const q = query(
+    collection(db, 'rooms', cleanRoomId, 'webrtc_signals'),
+    where('roomId', '==', cleanRoomId)
+  );
+  try {
+    const snap = await getDocs(q);
+    const stale = snap.docs.filter(d => !cleanKeep || d.data().sessionId !== cleanKeep);
+    for (let i = 0; i < stale.length; i += 200) {
+      const batch = writeBatch(db);
+      stale.slice(i, i + 200).forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+  } catch (err) {
+    console.warn('WebRTC stale signal cleanup skipped:', err);
+  }
 }

@@ -69,20 +69,20 @@ export const GiftModal: React.FC<GiftModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-slate-900 border border-amber-500/30 rounded-3xl w-full max-w-md overflow-hidden text-white shadow-2xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/50 dark:bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="bg-white dark:bg-slate-900 border border-amber-400/50 dark:border-amber-500/30 rounded-3xl w-full max-w-md overflow-hidden text-slate-900 dark:text-white shadow-2xl flex flex-col max-h-[90vh] transition-colors duration-300">
         {/* Header */}
-        <div className="bg-gradient-to-r from-amber-950 via-slate-900 to-amber-950 px-4 py-3 border-b border-amber-500/20 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-amber-50 via-white to-amber-50 dark:from-amber-950 dark:via-slate-900 dark:to-amber-950 px-4 py-3 border-b border-amber-200 dark:border-amber-500/20 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Gift size={20} className="text-amber-400" />
-            <h2 className="font-bold text-sm text-amber-300">متجر الهدايا الفاخرة</h2>
+            <Gift size={20} className="text-amber-600 dark:text-amber-400" />
+            <h2 className="font-bold text-sm text-amber-800 dark:text-amber-300">متجر الهدايا الفاخرة</h2>
           </div>
 
           {/* User Coins Balance */}
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 rounded-full px-2.5 py-1 text-xs">
-              <Coins size={14} className="text-amber-400" />
-              <span className="font-mono font-bold text-amber-300">
+            <div className="flex items-center gap-1.5 bg-amber-100 dark:bg-amber-500/15 border border-amber-300 dark:border-amber-500/30 rounded-full px-2.5 py-1 text-xs">
+              <Coins size={14} className="text-amber-600 dark:text-amber-400" />
+              <span className="font-mono font-bold text-amber-800 dark:text-amber-300">
                 {currentUser.coins.toLocaleString('ar-SA')}
               </span>
             </div>
@@ -96,7 +96,7 @@ export const GiftModal: React.FC<GiftModalProps> = ({
             </button>
             <button
               onClick={onClose}
-              className="p-1 rounded-full text-slate-400 hover:text-white mr-1"
+              className="p-1 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mr-1"
             >
               <X size={18} />
             </button>
@@ -104,18 +104,18 @@ export const GiftModal: React.FC<GiftModalProps> = ({
         </div>
 
         {/* Recipient Selection Bar */}
-        <div className="p-3 bg-slate-950/60 border-b border-slate-800 text-right">
-          <label className="text-[11px] text-slate-400 block mb-1.5 font-semibold">
+        <div className="p-3 bg-slate-50/70 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800 text-right">
+          <label className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1.5 font-semibold">
             إهداء إلى:
           </label>
-          <div className="grid grid-cols-3 gap-1.5 text-xs">
+          <div className="flex items-center gap-1.5 text-xs touch-scroll-x py-0.5">
             {speaker && (
               <button
                 onClick={() => setRecipientType('speaker')}
-                className={`py-1.5 px-2 rounded-xl border text-center transition-all truncate ${
+                className={`flex-1 min-w-[96px] py-1.5 px-2.5 rounded-xl border text-center transition-all shrink-0 whitespace-nowrap ${
                   recipientType === 'speaker'
                     ? 'bg-amber-500 text-slate-950 font-bold border-amber-400'
-                    : 'bg-slate-800 text-slate-300 border-slate-700'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                 }`}
               >
                 المتحدث 🎙️
@@ -123,20 +123,20 @@ export const GiftModal: React.FC<GiftModalProps> = ({
             )}
             <button
               onClick={() => setRecipientType('room')}
-              className={`py-1.5 px-2 rounded-xl border text-center transition-all ${
+              className={`flex-1 min-w-[96px] py-1.5 px-2.5 rounded-xl border text-center transition-all shrink-0 whitespace-nowrap ${
                 recipientType === 'room'
                   ? 'bg-amber-500 text-slate-950 font-bold border-amber-400'
-                  : 'bg-slate-800 text-slate-300 border-slate-700'
+                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
               }`}
             >
               الروم العام 👑
             </button>
             <button
               onClick={() => setRecipientType('user')}
-              className={`py-1.5 px-2 rounded-xl border text-center transition-all ${
+              className={`flex-1 min-w-[96px] py-1.5 px-2.5 rounded-xl border text-center transition-all shrink-0 whitespace-nowrap ${
                 recipientType === 'user'
                   ? 'bg-amber-500 text-slate-950 font-bold border-amber-400'
-                  : 'bg-slate-800 text-slate-300 border-slate-700'
+                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
               }`}
             >
               عضو محدد 👤
@@ -148,7 +148,7 @@ export const GiftModal: React.FC<GiftModalProps> = ({
             <select
               value={selectedUserId}
               onChange={e => setSelectedUserId(e.target.value)}
-              className="w-full mt-2 bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs text-white outline-none"
+              className="w-full mt-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2 text-xs text-slate-900 dark:text-white outline-none"
             >
               {users.map(u => (
                 <option key={u.id} value={u.id}>
@@ -160,7 +160,7 @@ export const GiftModal: React.FC<GiftModalProps> = ({
         </div>
 
         {/* Category Tabs */}
-        <div className="flex items-center gap-1 px-3 pt-2 border-b border-slate-800 text-xs">
+        <div className="flex items-center gap-1.5 px-3 pt-2 border-b border-slate-200 dark:border-slate-800 text-xs touch-scroll-x shrink-0">
           {[
             { id: 'all', label: 'الكل' },
             { id: 'classic', label: 'كلاسيكية' },
@@ -170,10 +170,10 @@ export const GiftModal: React.FC<GiftModalProps> = ({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as 'all' | 'classic' | 'luxury' | 'royal')}
-              className={`px-3 py-1.5 rounded-t-lg transition-colors border-b-2 font-medium ${
+              className={`px-3 py-1.5 rounded-t-lg transition-colors border-b-2 font-medium shrink-0 whitespace-nowrap ${
                 activeTab === tab.id
-                  ? 'text-amber-400 border-amber-400 bg-slate-800/60'
-                  : 'text-slate-400 border-transparent hover:text-slate-200'
+                  ? 'text-amber-700 dark:text-amber-400 border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-slate-800/60'
+                  : 'text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               {tab.label}
@@ -193,8 +193,8 @@ export const GiftModal: React.FC<GiftModalProps> = ({
                 onClick={() => setSelectedGift(gift)}
                 className={`p-2 rounded-2xl border text-center flex flex-col items-center justify-between transition-all relative ${
                   isSelected
-                    ? 'bg-amber-950/40 border-amber-400 ring-2 ring-amber-400/40 shadow-lg scale-102'
-                    : 'bg-slate-800/60 border-slate-700/60 hover:bg-slate-800'
+                    ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-500 dark:border-amber-400 ring-2 ring-amber-400/40 shadow-lg scale-102'
+                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/60 hover:bg-slate-100 dark:hover:bg-slate-800'
                 } ${!canAfford ? 'opacity-60' : ''}`}
               >
                 {isSelected && (
@@ -205,12 +205,12 @@ export const GiftModal: React.FC<GiftModalProps> = ({
                 <span className="text-3xl my-1 transform group-hover:scale-110 transition-transform">
                   {gift.icon}
                 </span>
-                <span className="text-[11px] font-bold text-slate-200 truncate w-full mb-1">
+                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate w-full mb-1">
                   {gift.name}
                 </span>
-                <div className="flex items-center gap-1 bg-slate-950/70 px-2 py-0.5 rounded-full border border-slate-800">
-                  <Coins size={10} className="text-amber-400" />
-                  <span className="text-[10px] font-mono text-amber-300 font-bold">
+                <div className="flex items-center gap-1 bg-white dark:bg-slate-950/70 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-800">
+                  <Coins size={10} className="text-amber-600 dark:text-amber-400" />
+                  <span className="text-[10px] font-mono text-amber-700 dark:text-amber-300 font-bold">
                     {gift.price}
                   </span>
                 </div>
@@ -221,18 +221,18 @@ export const GiftModal: React.FC<GiftModalProps> = ({
 
         {/* Insufficient Coins Inline Error */}
         {errorMsg && (
-          <div className="mx-3 mb-2 p-2 rounded-xl bg-red-950/70 border border-red-500/50 text-red-200 text-xs text-center font-bold">
+          <div className="mx-3 mb-2 p-2 rounded-xl bg-red-50 dark:bg-red-950/70 border border-red-200 dark:border-red-500/50 text-red-700 dark:text-red-200 text-xs text-center font-bold">
             {errorMsg}
           </div>
         )}
 
         {/* Footer & Send Action */}
-        <div className="p-3 bg-slate-950 border-t border-slate-800 flex items-center justify-between gap-3">
+        <div className="p-3 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
           <div className="text-right">
-            <span className="text-[11px] text-slate-400 block">الهدية المختارة:</span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 block">الهدية المختارة:</span>
             <div className="flex items-center gap-1">
               <span className="text-base">{selectedGift.icon}</span>
-              <span className="text-xs font-bold text-amber-300">{selectedGift.name}</span>
+              <span className="text-xs font-bold text-amber-700 dark:text-amber-300">{selectedGift.name}</span>
             </div>
           </div>
 

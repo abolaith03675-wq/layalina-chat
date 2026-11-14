@@ -51,8 +51,8 @@ export const UserBadge: React.FC<UserBadgeProps> = ({ role, showLabel = true, si
         return {
           label: 'زائر',
           icon: Globe,
-          bg: 'bg-slate-800 text-slate-300 border-slate-700',
-          textColor: 'text-slate-400',
+          bg: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+          textColor: 'text-slate-600 dark:text-slate-400',
         };
     }
   };

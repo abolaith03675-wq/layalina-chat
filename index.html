@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -9,6 +9,16 @@
     <meta property="og:description" content="تطبيق دردشة ليالينا الصوتية - غرف الدول العربية ومنصة المايكروفون والهدايا الملكية." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('layali_theme_mode_v1');
+          var isDark = saved !== 'light';
+          document.documentElement.classList.toggle('dark', isDark);
+          document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+        } catch (e) {}
+      })();
+    </script>
     <!-- Fonts for Arabic Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -21,7 +31,7 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
   </head>
-  <body class="bg-[#070a12] text-slate-100 antialiased selection:bg-amber-500 selection:text-black">
+  <body class="bg-slate-50 text-slate-900 dark:bg-[#070a12] dark:text-slate-100 antialiased selection:bg-amber-500 selection:text-black transition-colors duration-300">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
