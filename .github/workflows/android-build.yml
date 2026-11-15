@@ -23,12 +23,17 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Install and Build Bundle
+      - name: Install Dependencies and Initialize Android
         run: |
           npm install --legacy-peer-deps
-          npx cap update android
+          npx cap add android || true
+          npx cap sync android
+
+      - name: Build Android App Bundle (AAB)
+        run: |
           cd android
-          ./gradlew bundleRelease
+          chmod +x gradlew
+          ./gradlew bundleRelease --no-daemon
 
       - name: Upload AAB Artifact
         uses: actions/upload-artifact@v4
