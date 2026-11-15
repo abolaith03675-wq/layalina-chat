@@ -23,13 +23,9 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Create lock file and install dependencies
+      - name: Install and Build Bundle
         run: |
-          npm install --package-lock-only --legacy-peer-deps || true
           npm install --legacy-peer-deps
-
-      - name: Build Android App Bundle (AAB)
-        run: |
           npx cap update android
           cd android
           ./gradlew bundleRelease
