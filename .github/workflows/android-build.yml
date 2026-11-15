@@ -16,7 +16,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Set up Java 21
         uses: actions/setup-java@v4
@@ -24,8 +23,8 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Install dependencies bypassing lock
-        run: npm install --no-package-lock --legacy-peer-deps
+      - name: Install dependencies cleanly
+        run: npm install --legacy-peer-deps
 
       - name: Build Android App Bundle (AAB)
         run: |
