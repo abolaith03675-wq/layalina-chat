@@ -24,13 +24,10 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Install dependencies
+      - name: Install dependencies safely
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install --legacy-peer-deps
-          fi
+          npm install --package-lock-only --legacy-peer-deps || true
+          npm install --legacy-peer-deps
 
       - name: Build Android App Bundle (AAB)
         run: |
