@@ -24,10 +24,8 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Install dependencies safely
-        run: |
-          npm install --package-lock-only --legacy-peer-deps || true
-          npm install --legacy-peer-deps
+      - name: Install dependencies bypassing lock
+        run: npm install --no-package-lock --legacy-peer-deps
 
       - name: Build Android App Bundle (AAB)
         run: |
