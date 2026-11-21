@@ -29,7 +29,32 @@ jobs:
           npm run build || true
           npx cap sync android
 
+      - name: Decode Keystore and Configure Release Signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release-key.jks
+          cat << 'EOF' >> android/app/build.gradle
+
+          android.signingConfigs {
+              release {
+                  storeFile file('release-key.jks')
+                  storePassword System.getenv('KEYSTORE_PASSWORD') ?: ''
+                  keyAlias System.getenv('KEY_ALIAS') ?: ''
+                  keyPassword System.getenv('KEY_PASSWORD') ?: ''
+              }
+          }
+          android.buildTypes.release.signingConfig = android.signingConfigs.release
+          EOF
+
       - name: Build Android App Bundle (AAB)
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd android
           chmod +x gradlew
